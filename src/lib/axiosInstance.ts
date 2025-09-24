@@ -7,13 +7,15 @@ const normalizeApiBase = (raw: string) => {
 };
 
 const getBaseURL = () => {
-  // Prefer same-origin for local dev to avoid CORS and SW problems
+  const rawFromEnv = process.env.NEXT_PUBLIC_MAIN_API_URL || process.env.NEXT_PUBLIC_API_URL || "";
+
+  // Browser: honor explicit env if provided; otherwise same-origin for dev
   if (typeof window !== "undefined") {
-    return "/api";
+    return rawFromEnv ? normalizeApiBase(rawFromEnv) : "/api";
   }
-  // Default to same-origin in SSR as well
-  const raw = process.env.NEXT_PUBLIC_API_URL || "";
-  return raw ? normalizeApiBase(raw) : "/api";
+
+  // SSR: same logic
+  return rawFromEnv ? normalizeApiBase(rawFromEnv) : "/api";
 };
 
 export const axiosInstance = axios.create({
