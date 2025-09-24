@@ -7,6 +7,7 @@ import {
   Trash2,
   Clock,
   MoreVertical,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "react-hot-toast"
@@ -146,6 +147,9 @@ export default function TodosSection({
   const [, setCurrentTime] = useState(new Date())
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [conflicts, setConflicts] = useState<TimeConflict[]>([])
+  const [isSaving, setIsSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
   
   const [formData, setFormData] = useState({
     title: "",
@@ -335,6 +339,7 @@ export default function TodosSection({
   const proceedWithTodoSubmission = async () => {
     console.log("proceedWithTodoSubmission called")
     try {
+      setIsSaving(true)
       if (editingTodo) {
         // Update existing todo
         const updatedTodo =         await updateTodo({
@@ -397,6 +402,8 @@ export default function TodosSection({
     } catch (error) {
       console.error("Failed to save todo:", error)
       toast.error("Failed to save todo")
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -431,23 +438,29 @@ export default function TodosSection({
 
   const handleDelete = async (todoId: string) => {
     try {
+      setDeletingId(todoId)
       await deleteTodo(todoId)
       setTodos(prevTodos => prevTodos.filter((todo) => todo._id !== todoId))
       toast.success("Todo deleted successfully")
     } catch (error) {
       console.error("Failed to delete todo:", error)
       toast.error("Failed to delete todo")
+    } finally {
+      setDeletingId(null)
     }
   }
 
   const handleStatusChange = async (todoId: string, isCompleted: boolean) => {
     try {
+      setTogglingId(todoId)
       const updatedTodo = await toggleTodoStatus(todoId)
       setTodos(prevTodos => prevTodos.map((todo) => (todo._id === todoId ? updatedTodo : todo)))
       toast.success(isCompleted ? "Todo marked as completed" : "Todo marked as pending")
     } catch (error) {
       console.error("Failed to update todo status:", error)
       toast.error("Failed to update todo status")
+    } finally {
+      setTogglingId(null)
     }
   }
 
@@ -832,8 +845,16 @@ export default function TodosSection({
               <Button
                 type="submit"
                 className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                disabled={isSaving}
               >
-                {editingTodo ? "Update Todo" : "Create Todo"}
+                {isSaving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {editingTodo ? "Updating..." : "Creating..."}
+                  </span>
+                ) : (
+                  editingTodo ? "Update Todo" : "Create Todo"
+                )}
               </Button>
               <Button
                 type="button"
@@ -913,9 +934,9 @@ export default function TodosSection({
                         onCheckedChange={(checked) =>
                           handleStatusChange(todo._id, checked as boolean)
                         }
-                        disabled={isToggleDisabled(todo.scheduledDate)}
+                        disabled={isToggleDisabled(todo.scheduledDate) || togglingId === todo._id}
                         className={`h-8 w-8 rounded-full border-1 ${getCheckboxColorClasses(todo.color || 'blue')} data-[state=checked]:text-white shrink-0 ${
-                          isToggleDisabled(todo.scheduledDate) 
+                          isToggleDisabled(todo.scheduledDate) || togglingId === todo._id
                             ? "opacity-50 cursor-not-allowed" 
                             : ""
                         }`}
@@ -940,21 +961,35 @@ export default function TodosSection({
                               variant="ghost"
                               size="sm"
                               className="p-1 h-6 w-6 hover:bg-gray-100"
+                              disabled={deletingId === todo._id}
                             >
-                              <MoreVertical className="h-4 w-4" />
+                              {deletingId === todo._id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <MoreVertical className="h-4 w-4" />
+                              )}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(todo)}>
+                            <DropdownMenuItem onClick={() => deletingId ? null : handleEdit(todo)} className={deletingId ? "pointer-events-none opacity-50" : ""}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => handleDelete(todo._id)}
-                              className="text-red-600 hover:bg-red-100"
+                              onClick={() => deletingId ? null : handleDelete(todo._id)}
+                              className={`text-red-600 hover:bg-red-100 ${deletingId === todo._id ? "pointer-events-none opacity-60" : ""}`}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              {deletingId === todo._id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Deleting...
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </>
+                              )}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
