@@ -758,7 +758,7 @@ export default function TodosSection({
             </div>
 
             {/* Date and Time Row */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 h-6">
                   <Label htmlFor="dueDate">Date</Label>
