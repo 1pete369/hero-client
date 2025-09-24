@@ -712,9 +712,9 @@ export default function TodosSection({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 col-span-2">
                 <Label>Color</Label>
-                <div className="flex gap-2 flex-wrap">
+                <div className="grid grid-cols-10 gap-2 w-full">
                   {[
                     { value: "blue", color: "bg-blue-500", borderColor: "border-blue-600" },
                     { value: "green", color: "bg-green-500", borderColor: "border-green-600" },
