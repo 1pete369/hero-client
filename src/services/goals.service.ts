@@ -21,17 +21,23 @@ export interface Goal {
 
 export interface CreateGoalData {
   title: string
-  description: string
+  description?: string
   targetDate: string
   priority?: "low" | "medium" | "high"
   category?: string
   linkedHabits?: string[]
 }
 
-export interface UpdateGoalData extends Partial<CreateGoalData> {
-  _id: string
+export interface UpdateGoalData {
+  title?: string
+  description?: string
+  targetDate?: string
   status?: "active" | "completed" | "cancelled"
+  isCompleted?: boolean
   progress?: number
+  priority?: "low" | "medium" | "high"
+  category?: string
+  linkedHabits?: string[]
 }
 
 const baseUrl = "/goal"
@@ -41,19 +47,25 @@ export const getGoals = async (): Promise<Goal[]> => {
   return response.data
 }
 
+export const getGoalById = async (id: string): Promise<Goal> => {
+  const response = await axiosAppInstance.get(`${baseUrl}/${id}`)
+  return response.data
+}
+
 export const createGoal = async (goalData: CreateGoalData): Promise<Goal> => {
   const response = await axiosAppInstance.post(baseUrl, goalData)
   return response.data
 }
 
-export const updateGoal = async (goalData: UpdateGoalData): Promise<Goal> => {
-  const { _id, ...updates } = goalData
-  const response = await axiosAppInstance.patch(`${baseUrl}/${_id}`, updates)
+export const updateGoal = async (id: string, goalData: UpdateGoalData): Promise<Goal> => {
+  const response = await axiosAppInstance.patch(`${baseUrl}/${id}`, goalData)
   return response.data
 }
 
-export const deleteGoal = async (_id: string): Promise<void> => {
-  await axiosAppInstance.delete(`${baseUrl}/${_id}`)
+export const deleteGoal = async (id: string): Promise<void> => {
+  await axiosAppInstance.delete(`${baseUrl}/${id}`)
 }
 
-
+export const toggleGoalStatus = async (id: string, isCompleted: boolean): Promise<Goal> => {
+  return updateGoal(id, { isCompleted })
+}

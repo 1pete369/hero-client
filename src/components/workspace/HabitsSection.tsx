@@ -32,7 +32,8 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
     frequency: "daily",
     days: [],
     startDate: new Date().toISOString().split('T')[0],
-    category: "personal"
+    category: "personal",
+    linkedGoalId: undefined,
   })
 
   // Load habits and goals on component mount
@@ -60,9 +61,10 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
       setGoals(data)
     } catch (error) {
       console.error("Failed to load goals", error)
-      // Don't show error toast for goals as it's not critical
+      // goals are optional for habits; do not toast here
     }
   }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -111,8 +113,7 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
 
   const handleEdit = (habit: Habit) => {
     setEditingHabit(habit)
-    
-    // Handle linkedGoalId - it might be an object (populated) or string (ID)
+    // Normalize linkedGoalId for the form (string id or "none")
     let goalId = "none"
     if (habit.linkedGoalId) {
       if (typeof habit.linkedGoalId === 'string') {
@@ -121,14 +122,14 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
         goalId = (habit.linkedGoalId as { _id: string })._id
       }
     }
-    
+
     setFormData({
       title: habit.title,
       frequency: habit.frequency,
       days: habit.days,
       startDate: habit.startDate.split('T')[0], // Convert to YYYY-MM-DD format
       category: habit.category,
-      linkedGoalId: goalId
+      linkedGoalId: goalId === "none" ? undefined : goalId,
     })
     setShowAddForm(true)
   }
@@ -167,7 +168,7 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
       days: [],
       startDate: new Date().toISOString().split('T')[0],
       category: "personal",
-      linkedGoalId: "none"
+      linkedGoalId: undefined,
     })
     setShowAddForm(false)
     setEditingHabit(null)
@@ -275,7 +276,7 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
             <div className="space-y-2">
               <Label>Link to Goal (Optional)</Label>
               <Select
-                value={formData.linkedGoalId || "none"}
+                value={(formData.linkedGoalId as string | undefined) || "none"}
                 onValueChange={(value) => setFormData({...formData, linkedGoalId: value === "none" ? undefined : value})}
               >
                 <SelectTrigger>
@@ -427,7 +428,6 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
                   {getFrequencyText(habit.frequency)}
                 </span>
               </div>
-              
               {/* Right: Goal Link */}
               {habit.linkedGoalId && (
                 <div className="relative group">
@@ -436,19 +436,15 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
                   </div>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
                     {(() => {
-                      // If linkedGoalId is already a populated object, use it directly
                       if (typeof habit.linkedGoalId === 'object' && habit.linkedGoalId && 'title' in habit.linkedGoalId) {
-                        const goal = habit.linkedGoalId as { title: string; isCompleted: boolean };
+                        const goal = habit.linkedGoalId as { title: string; isCompleted?: boolean };
                         return `${goal.title}${goal.isCompleted ? ' ✓' : ''}`;
                       }
-                      
-                      // Otherwise, find the goal by ID
-                      const goalId = typeof habit.linkedGoalId === 'string' 
-                        ? habit.linkedGoalId 
+                      const goalId = typeof habit.linkedGoalId === 'string'
+                        ? habit.linkedGoalId
                         : (habit.linkedGoalId as { _id: string })?._id;
-                      
                       const linkedGoal = goals.find(g => g._id === goalId);
-                      return linkedGoal ? `${linkedGoal.title}${linkedGoal.isCompleted ? ' ✓' : ''}` : 'Unknown Goal';
+                      return linkedGoal ? `${linkedGoal.title}${(linkedGoal as any).isCompleted ? ' ✓' : ''}` : 'Unknown Goal';
                     })()}
                   </div>
                 </div>

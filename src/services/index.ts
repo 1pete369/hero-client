@@ -9,15 +9,6 @@ export {
   type UpdateTodoData,
 } from "./todos.service"
 
-export {
-  getGoals,
-  createGoal,
-  updateGoal,
-  deleteGoal,
-  type Goal,
-  type CreateGoalData,
-  type UpdateGoalData,
-} from "./goals.service"
 
 export {
   habitsService,
@@ -25,5 +16,16 @@ export {
   type CreateHabitData,
   type UpdateHabitData,
 } from "./habits.service"
+
+export {
+  getGoals,
+  createGoal,
+  updateGoal,
+  deleteGoal,
+  toggleGoalStatus,
+  type Goal,
+  type CreateGoalData,
+  type UpdateGoalData,
+} from "./goals.service"
 
 

@@ -48,6 +48,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
   const [goals, setGoals] = useState<Goal[]>([])
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -58,24 +59,28 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
 
   // Load goals on mount
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await getGoals()
-        setGoals(data)
-      } catch (err) {
-        console.error("Failed to load goals", err)
-      }
-    }
-    load()
+    loadGoals()
   }, [])
+
+  const loadGoals = async () => {
+    try {
+      setLoading(true)
+      const data = await getGoals()
+      setGoals(data)
+    } catch (err) {
+      console.error("Failed to load goals", err)
+      toast.error("Failed to load goals")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (editingGoal) {
       try {
-        const updated = await updateGoal({
-          _id: editingGoal._id,
+        const updated = await updateGoal(editingGoal._id, {
           title: formData.title,
           description: formData.description,
           targetDate: formData.targetDate,
@@ -84,8 +89,10 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
         })
         setGoals(goals.map((g) => (g._id === updated._id ? updated : g)))
         setEditingGoal(null)
+        toast.success("Goal updated successfully!")
       } catch (err) {
         console.error("Failed to update goal", err)
+        toast.error("Failed to update goal")
       }
     } else {
       try {
@@ -98,6 +105,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
         }
         const created = await createGoal(payload)
         setGoals([...goals, created])
+        toast.success("Goal created successfully!")
       } catch (err: unknown) {
         console.error("Failed to create goal", err)
         
@@ -142,8 +150,10 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
     try {
       await deleteGoal(goalId)
       setGoals(goals.filter((goal) => goal._id !== goalId))
+      toast.success("Goal deleted successfully!")
     } catch (err) {
       console.error("Failed to delete goal", err)
+      toast.error("Failed to delete goal")
     }
   }
 
@@ -186,6 +196,14 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
     if (diffDays <= 7) return "medium"
     if (diffDays <= 14) return "low"
     return "none"
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    )
   }
 
   return (
@@ -548,5 +566,3 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
     </div>
   )
 }
-
-

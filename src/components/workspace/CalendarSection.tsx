@@ -388,7 +388,7 @@ export default function CalendarSection() {
                         {todo.title}
                       </h3>
                       
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
                           <span className="font-medium">

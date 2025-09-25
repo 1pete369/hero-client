@@ -412,7 +412,22 @@ export default function WorkspacePage() {
                   </>
                 )}
 
-                {/* Inline Add button removed in favor of global FAB */}
+                {/* Desktop Add button (hidden on mobile) */}
+                {activeSection !== "calendar" && (
+                  <Button
+                    onClick={() => {
+                      if (activeSection === "todos") setShowTodoForm(true)
+                      else if (activeSection === "finance") setShowFinanceForm(true)
+                      else if (activeSection === "goals") setShowGoalsForm(true)
+                      else if (activeSection === "habits") setShowHabitsForm(true)
+                    }}
+                    className="hidden lg:inline-flex bg-indigo-600 hover:bg-indigo-700 text-white"
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -432,7 +447,7 @@ export default function WorkspacePage() {
             else if (activeSection === "habits") setShowHabitsForm(true)
           }}
           aria-label={`Add ${activeSection}`}
-          className="fixed bottom-5 right-5 lg:bottom-8 lg:right-8 z-50 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-14 h-14 flex items-center justify-center"
+          className="lg:hidden fixed bottom-5 right-5 z-50 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-14 h-14 flex items-center justify-center"
         >
           <Plus className="h-6 w-6" aria-hidden="true" />
         </button>

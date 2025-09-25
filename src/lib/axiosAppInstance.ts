@@ -22,6 +22,7 @@ const getMainApiBaseURL = () => {
   const rawFromEnv = process.env.NEXT_PUBLIC_MAIN_API_URL;
   if (rawFromEnv && rawFromEnv.trim()) {
     return normalizeApiBase(rawFromEnv);
+    
   }
 
   // 3) Final default
