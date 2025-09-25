@@ -85,7 +85,10 @@ export default function WorkspacePage() {
     return () => clearTimeout(timer)
   }, [activeSection, router])
 
-  const handleSectionChange = (section: string) => setActiveSection(section)
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section)
+    setIsMobileMenuOpen(false)
+  }
 
   useEffect(() => {
     if (isCheckingAuth) return
@@ -209,6 +212,13 @@ export default function WorkspacePage() {
           onSectionChange={handleSectionChange}
           isMobileMenuOpen={isMobileMenuOpen}
         />
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
 
         <main className="flex-1 p-3 sm:p-4 lg:p-4 h-full overflow-hidden">
           <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
