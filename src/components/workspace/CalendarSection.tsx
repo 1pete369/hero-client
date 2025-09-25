@@ -59,6 +59,17 @@ export default function CalendarSection() {
     return false
   }
 
+  // Is completed on a specific date (recurring uses per-day completedDates)
+  const isCompletedOnDate = (todo: Todo, date: Date) => {
+    const dateStr = date.toISOString().split("T")[0]
+    const rec: any = (todo as any).recurring
+    if (rec && rec !== 'none') {
+      const arr = Array.isArray((todo as any).completedDates) ? (todo as any).completedDates : []
+      return arr.includes(dateStr)
+    }
+    return Boolean(todo.isCompleted)
+  }
+
   // Get todos for a specific date
   const getTodosForDate = (date: Date) => {
     return todos.filter(todo => occursOn(todo, date))
@@ -292,7 +303,7 @@ export default function CalendarSection() {
                           key={todo._id}
                           title={`${todo.title} - ${formatTime(todo.startTime)}`}
                           className={`group relative rounded-md border text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1 pr-2 overflow-hidden ${getTodoColorClasses(todo.color)} ${
-                            todo.isCompleted ? 'opacity-60' : ''
+                            isCompletedOnDate(todo, day.date) ? 'opacity-60' : ''
                           }`}
                         >
                           <span className={`absolute left-0 top-0 h-full w-0.5 sm:w-1 ${getTodoRailColor(todo.color)}`} />
@@ -340,7 +351,7 @@ export default function CalendarSection() {
                     <div
                       key={todo._id}
                       className={`p-3 rounded-lg border ${
-                        todo.isCompleted ? 'bg-slate-50 border-slate-200' : 'bg-white border-gray-200 shadow-sm'
+                        isCompletedOnDate(todo, selectedDate!) ? 'bg-slate-50 border-slate-200' : 'bg-white border-gray-200 shadow-sm'
                       }`}
                     >
                       <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -387,7 +398,7 @@ export default function CalendarSection() {
                   key={todo._id}
                     className={`
                      p-4 rounded-lg border transition-all
-                     ${todo.isCompleted 
+                     ${isCompletedOnDate(todo, selectedDate!) 
                        ? 'bg-slate-50 border-slate-200' 
                        : 'bg-white border-gray-200 shadow-sm'
                      }
@@ -397,7 +408,7 @@ export default function CalendarSection() {
                   <div className="flex items-start justify-start">
                     <div className="flex-1">
                       <h3 className={`font-semibold text-gray-900 mb-1 ${
-                        todo.isCompleted ? 'line-through text-gray-500' : ''
+                        isCompletedOnDate(todo, selectedDate!) ? 'line-through text-gray-500' : ''
                       }`}>
                         {todo.title}
                       </h3>
