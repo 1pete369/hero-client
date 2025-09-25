@@ -473,8 +473,17 @@ export default function TodosSection({
     // Get todo's date in YYYY-MM-DD format (no timezone conversion)
     const todoDateStr = todo.scheduledDate.split('T')[0]
     
-    // Check if todo is scheduled for today
-    const isToday = todoDateStr === today
+    // Check if todo is scheduled for today or repeats today
+    const baseIsToday = todoDateStr === today
+    let repeatsToday = false
+    if ((todo as any).recurring === 'daily') repeatsToday = true
+    if ((todo as any).recurring === 'weekly') {
+      const dayIdx = new Date().getDay() // 0=Sun
+      const map = ['sun','mon','tue','wed','thu','fri','sat']
+      const daysArr = Array.isArray((todo as any).days) ? (todo as any).days : []
+      repeatsToday = daysArr.includes(map[dayIdx])
+    }
+    const isToday = baseIsToday || repeatsToday
     const isPast = todoDateStr < today
     const isFuture = todoDateStr > today
     
@@ -755,6 +764,59 @@ export default function TodosSection({
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* Recurrence */}
+            <div className="space-y-2">
+              <Label>Frequency</Label>
+              <Select
+                value={formData.recurring}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    recurring: value as "none" | "daily" | "weekly" | "monthly",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">One-time</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+              {formData.recurring === "weekly" && (
+                <div className="mt-2">
+                  <Label className="mb-1 block text-xs text-gray-600">Repeat on</Label>
+                  <div className="grid grid-cols-7 gap-1">
+                    {["sun","mon","tue","wed","thu","fri","sat"].map((d) => {
+                      const active = formData.days.includes(d)
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => {
+                            const days = active
+                              ? formData.days.filter((x) => x !== d)
+                              : [...formData.days, d]
+                            setFormData({ ...formData, days })
+                          }}
+                          className={`text-xs py-1.5 rounded border transition-colors ${
+                            active
+                              ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {d.toUpperCase().slice(0,3)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Date and Time Row */}
