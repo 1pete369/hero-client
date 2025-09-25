@@ -1033,7 +1033,7 @@ export default function TodosSection({
                         <Label
                           htmlFor={`todo-${todo._id}`}
                           className={`text-sm leading-5 font-semibold truncate cursor-pointer block ${
-                            todo.isCompleted
+                            isCompletedForDisplay(todo)
                               ? "line-through text-gray-400"
                               : "text-gray-900"
                           }`}
