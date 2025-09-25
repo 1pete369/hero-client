@@ -308,7 +308,7 @@ export default function CalendarSection() {
                         >
                           <span className={`absolute left-0 top-0 h-full w-0.5 sm:w-1 ${getTodoRailColor(todo.color)}`} />
                           <div className="flex items-center gap-1">
-                            <span className="truncate font-medium flex-1 min-w-0">{todo.title}</span>
+                            <span className={`truncate font-medium flex-1 min-w-0 ${isCompletedOnDate(todo, day.date) ? 'line-through text-gray-500' : ''}`}>{todo.title}</span>
                             <span className="text-[9px] sm:text-[10px] text-gray-600">{formatTime(todo.startTime)}</span>
                           </div>
                         </div>
@@ -350,10 +350,11 @@ export default function CalendarSection() {
                   {getSelectedDateTodos().map((todo) => (
                     <div
                       key={todo._id}
-                      className={`p-3 rounded-lg border ${
-                        isCompletedOnDate(todo, selectedDate!) ? 'bg-slate-50 border-slate-200' : 'bg-white border-gray-200 shadow-sm'
+                      className={`p-3 rounded-lg border overflow-hidden relative ${getTodoColorClasses(todo.color)} ${
+                        isCompletedOnDate(todo, selectedDate!) ? 'opacity-60' : ''
                       }`}
                     >
+                      <span className={`absolute left-0 top-0 h-full w-1 ${getTodoRailColor(todo.color)}`} />
                       <div className="flex items-center gap-2 text-sm text-gray-700">
                         <Clock className="h-4 w-4" />
                         <span className="font-medium">{formatTime(todo.startTime)} - {formatTime(todo.endTime)}</span>
@@ -361,7 +362,7 @@ export default function CalendarSection() {
                           todo.priority === 'high' ? 'bg-red-100 text-red-700' : todo.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
                         }`}>{todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}</span>
                       </div>
-                      <div className="mt-1 text-sm font-semibold text-gray-900">{todo.title}</div>
+                      <div className={`mt-1 text-sm font-semibold ${isCompletedOnDate(todo, selectedDate!) ? 'line-through text-gray-600' : 'text-gray-900'}`}>{todo.title}</div>
                       <div className="mt-1 text-xs inline-flex px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
                         {todo.category.charAt(0).toUpperCase() + todo.category.slice(1)}
                       </div>
@@ -397,18 +398,17 @@ export default function CalendarSection() {
                 <div
                   key={todo._id}
                     className={`
-                     p-4 rounded-lg border transition-all
-                     ${isCompletedOnDate(todo, selectedDate!) 
-                       ? 'bg-slate-50 border-slate-200' 
-                       : 'bg-white border-gray-200 shadow-sm'
-                     }
+                     p-4 rounded-lg border transition-all overflow-hidden relative
+                     ${getTodoColorClasses(todo.color)}
+                     ${isCompletedOnDate(todo, selectedDate!) ? 'opacity-60' : ''}
                      hover:shadow-md
                    `}
                 >
+                  <span className={`absolute left-0 top-0 h-full w-1 ${getTodoRailColor(todo.color)}`} />
                   <div className="flex items-start justify-start">
                     <div className="flex-1">
-                      <h3 className={`font-semibold text-gray-900 mb-1 ${
-                        isCompletedOnDate(todo, selectedDate!) ? 'line-through text-gray-500' : ''
+                      <h3 className={`font-semibold mb-1 ${
+                        isCompletedOnDate(todo, selectedDate!) ? 'line-through text-gray-600' : 'text-gray-900'
                       }`}>
                         {todo.title}
                       </h3>
