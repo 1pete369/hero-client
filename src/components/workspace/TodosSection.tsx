@@ -894,35 +894,38 @@ export default function TodosSection({
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 h-6">
-                  <Label htmlFor="startTime">Start</Label>
+              {/* Start/End on one row for mobile; separate on sm+ */}
+              <div className="grid grid-cols-2 gap-4 sm:contents">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 h-6">
+                    <Label htmlFor="startTime">Start</Label>
+                  </div>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) =>
+                      setFormData({ ...formData, startTime: e.target.value })
+                    }
+                    required
+                    className="w-full"
+                  />
                 </div>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={formData.startTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startTime: e.target.value })
-                  }
-                  required
-                  className="w-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 h-6">
-                  <Label htmlFor="endTime">End</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 h-6">
+                    <Label htmlFor="endTime">End</Label>
+                  </div>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) =>
+                      setFormData({ ...formData, endTime: e.target.value })
+                    }
+                    required
+                    className="w-full"
+                  />
                 </div>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={formData.endTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endTime: e.target.value })
-                  }
-                  required
-                  className="w-full"
-                />
               </div>
             </div>
 
