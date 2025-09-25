@@ -146,6 +146,8 @@ export default function TimelineView({
     if (!todo.scheduledDate) return false
     const baseISO = (todo.scheduledDate.includes('T') ? todo.scheduledDate.split('T')[0] : todo.scheduledDate)
     if (baseISO === dateISO) return true
+    // Do not show occurrences before the scheduled (start) date
+    if (dateISO < baseISO) return false
     const recurring: any = (todo as any).recurring
     if (!recurring || recurring === 'none') return false
     const d = new Date(dateISO + 'T00:00:00Z')

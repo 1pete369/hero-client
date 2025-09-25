@@ -42,6 +42,8 @@ export default function CalendarSection() {
     if (!todo.scheduledDate) return false
     const baseISO = new Date(todo.scheduledDate).toISOString().split("T")[0]
     if (baseISO === dateStr) return true
+    // Do not show occurrences before the scheduled (start) date
+    if (dateStr < baseISO) return false
     const rec: any = (todo as any).recurring
     if (!rec || rec === 'none') return false
     if (rec === 'daily') return true
