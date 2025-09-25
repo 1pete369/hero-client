@@ -316,11 +316,11 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
       </Dialog>
 
       {/* Habits Grid */}
-      <div className="flex flex-wrap gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
         {habits.map((habit) => (
           <div
             key={habit._id}
-            className="transition-all bg-white h-auto min-h-[96px] w-[320px] rounded-lg border border-gray-200"
+            className="transition-all bg-white h-auto min-h-[96px] w-full rounded-lg border border-gray-200"
           >
             {/* Top Section - Title and Actions */}
             <div className="flex items-center justify-between px-3 pt-3">
