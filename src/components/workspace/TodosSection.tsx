@@ -810,7 +810,6 @@ export default function TodosSection({
                   <SelectItem value="none">One-time</SelectItem>
                   <SelectItem value="daily">Daily</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
                 </SelectContent>
               </Select>
               {formData.recurring === "weekly" && (
