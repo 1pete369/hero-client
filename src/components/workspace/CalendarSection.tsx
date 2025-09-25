@@ -16,7 +16,7 @@ export default function CalendarSection() {
   const [todos, setTodos] = useState<Todo[]>([])
   const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [showDateModal, setShowDateModal] = useState(false)
 
   // Load todos from API
