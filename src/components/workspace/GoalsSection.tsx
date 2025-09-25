@@ -313,7 +313,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
       </Dialog>
 
       {/* Goals Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
         {goals.map((goal) => {
           const urgency = getUrgencyLevel(goal.targetDate)
           const textClass =
