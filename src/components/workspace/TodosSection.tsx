@@ -172,17 +172,31 @@ export default function TodosSection({
      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
    }
 
-   // Helper function to check if todo toggle should be disabled
-   const isToggleDisabled = (scheduledDate: string) => {
-     const d = new Date(scheduledDate)
-     const y = d.getUTCFullYear()
-     const m = String(d.getUTCMonth() + 1).padStart(2, "0")
-     const da = String(d.getUTCDate()).padStart(2, "0")
-     const iso = `${y}-${m}-${da}`
-     
-     // Disable toggle for past and future todos (only allow today)
-     return iso !== getTodayISO()
-   }
+  // Helper: does this todo occur today (scheduled today or recurring today)
+  const occursToday = (todo: Todo) => {
+    const today = getTodayISO()
+    const scheduledISO = (todo.scheduledDate || '').split('T')[0]
+    if (scheduledISO === today) return true
+    const rec: any = (todo as any).recurring
+    if (!rec || rec === 'none') return false
+    if (rec === 'daily') return true
+    if (rec === 'weekly') {
+      const map = ['sun','mon','tue','wed','thu','fri','sat']
+      const dayIdx = new Date().getDay()
+      const daysArr: string[] = Array.isArray((todo as any).days) ? (todo as any).days : []
+      return daysArr.includes(map[dayIdx])
+    }
+    if (rec === 'monthly') {
+      const baseDay = new Date(scheduledISO).getUTCDate()
+      return new Date().getDate() === baseDay
+    }
+    return false
+  }
+
+  // Helper function to check if todo toggle should be disabled (only allow when it occurs today)
+  const isToggleDisabledForTodo = (todo: Todo) => {
+    return !occursToday(todo)
+  }
 
    // Helper function to check if current time is within todo's time block
    const isCurrentlyActive = (scheduledDate: string, startTime: string, endTime: string) => {
@@ -464,8 +478,17 @@ export default function TodosSection({
     }
   }
 
-  // removed usage in cards; helper not needed right now
-  
+  // Completion helper for display: respects recurring by checking today's completion
+  const isCompletedForDisplay = (todo: Todo) => {
+    const todayIso = getTodayISO()
+    const rec: any = (todo as any).recurring
+    if (rec && rec !== 'none') {
+      const arr = Array.isArray((todo as any).completedDates) ? (todo as any).completedDates : []
+      return arr.includes(todayIso)
+    }
+    return Boolean(todo.isCompleted)
+  }
+
   const filteredTodos = todos.filter((todo) => {
     // Get today's date in YYYY-MM-DD format (local timezone)
     const today = getTodayISO()
@@ -499,11 +522,13 @@ export default function TodosSection({
     }
     if (filter === "pending") {
       // Show only today's incomplete todos
-      return !todo.isCompleted && isToday && matchesPriority && matchesCategory
+      const done = isCompletedForDisplay(todo)
+      return !done && isToday && matchesPriority && matchesCategory
     }
     if (filter === "completed") {
       // Show only today's completed todos
-      return todo.isCompleted && isToday && matchesPriority && matchesCategory
+      const done = isCompletedForDisplay(todo)
+      return done && isToday && matchesPriority && matchesCategory
     }
     if (filter === "upcoming") {
       // Show future incomplete todos
@@ -992,13 +1017,13 @@ export default function TodosSection({
                   <div className="flex items-center justify-between  px-3 pt-3 ">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <Checkbox
-                        checked={todo.isCompleted}
+                        checked={isCompletedForDisplay(todo)}
                         onCheckedChange={(checked) =>
                           handleStatusChange(todo._id, checked as boolean)
                         }
-                        disabled={isToggleDisabled(todo.scheduledDate) || togglingId === todo._id}
+                        disabled={isToggleDisabledForTodo(todo) || togglingId === todo._id}
                         className={`h-8 w-8 rounded-full border-1 ${getCheckboxColorClasses(todo.color || 'blue')} data-[state=checked]:text-white shrink-0 ${
-                          isToggleDisabled(todo.scheduledDate) || togglingId === todo._id
+                          isToggleDisabledForTodo(todo) || togglingId === todo._id
                             ? "opacity-50 cursor-not-allowed" 
                             : ""
                         }`}
