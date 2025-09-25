@@ -36,13 +36,30 @@ export default function CalendarSection() {
     loadTodos()
   }, [])
 
+  // Does a todo occur on date considering recurrence
+  const occursOn = (todo: Todo, date: Date) => {
+    const dateStr = date.toISOString().split("T")[0]
+    if (!todo.scheduledDate) return false
+    const baseISO = new Date(todo.scheduledDate).toISOString().split("T")[0]
+    if (baseISO === dateStr) return true
+    const rec: any = (todo as any).recurring
+    if (!rec || rec === 'none') return false
+    if (rec === 'daily') return true
+    if (rec === 'weekly') {
+      const map = ['sun','mon','tue','wed','thu','fri','sat']
+      const daysArr: string[] = Array.isArray((todo as any).days) ? (todo as any).days : []
+      return daysArr.includes(map[date.getDay()])
+    }
+    if (rec === 'monthly') {
+      const baseDay = new Date(baseISO).getDate()
+      return date.getDate() === baseDay
+    }
+    return false
+  }
+
   // Get todos for a specific date
   const getTodosForDate = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0]
-    return todos.filter(todo => {
-      const todoDate = new Date(todo.scheduledDate).toISOString().split("T")[0]
-      return todoDate === dateStr
-    })
+    return todos.filter(todo => occursOn(todo, date))
   }
 
 
@@ -73,12 +90,7 @@ export default function CalendarSection() {
   // Get todos for selected date, sorted by time
   const getSelectedDateTodos = () => {
     if (!selectedDate) return []
-    
-    const dateStr = selectedDate.toISOString().split("T")[0]
-    const dateTodos = todos.filter(todo => {
-      const todoDate = new Date(todo.scheduledDate).toISOString().split("T")[0]
-      return todoDate === dateStr
-    })
+    const dateTodos = todos.filter(todo => occursOn(todo, selectedDate))
     
     // Sort by start time
     return dateTodos.sort((a, b) => {

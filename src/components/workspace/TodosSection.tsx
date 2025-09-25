@@ -806,8 +806,8 @@ export default function TodosSection({
                           }}
                           className={`text-xs py-1.5 rounded border transition-colors ${
                             active
-                              ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                              ? "bg-indigo-600 border-indigo-600 text-white"
+                              : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                           }`}
                         >
                           {d.toUpperCase().slice(0,3)}
@@ -853,7 +853,7 @@ export default function TodosSection({
                       variant="outline"
                       size="sm"
                       onClick={() => setFormData({ ...formData, dueDate: getTodayISO() })}
-                      className={`text-xs ${formData.dueDate === getTodayISO() ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : ''}`}
+                      className={`text-xs ${formData.dueDate === getTodayISO() ? 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700' : ''}`}
                     >
                       Today
                     </Button>
@@ -862,7 +862,7 @@ export default function TodosSection({
                       variant="outline"
                       size="sm"
                       onClick={() => setFormData({ ...formData, dueDate: getTomorrowISO() })}
-                      className={`text-xs ${formData.dueDate === getTomorrowISO() ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : ''}`}
+                      className={`text-xs ${formData.dueDate === getTomorrowISO() ? 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700' : ''}`}
                     >
                       Tomorrow
                     </Button>

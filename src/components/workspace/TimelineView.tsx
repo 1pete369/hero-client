@@ -141,19 +141,34 @@ export default function TimelineView({
   const selectedDate = propSelectedDate || getLocalDateString(new Date())
   const [internalSelectedDate, setInternalSelectedDate] = useState(selectedDate)
 
+  // Returns true if a todo occurs on the given YYYY-MM-DD date considering recurrence
+  const occursOn = (todo: Todo, dateISO: string) => {
+    if (!todo.scheduledDate) return false
+    const baseISO = (todo.scheduledDate.includes('T') ? todo.scheduledDate.split('T')[0] : todo.scheduledDate)
+    if (baseISO === dateISO) return true
+    const recurring: any = (todo as any).recurring
+    if (!recurring || recurring === 'none') return false
+    const d = new Date(dateISO + 'T00:00:00Z')
+    if (recurring === 'daily') return true
+    if (recurring === 'weekly') {
+      const map = ['sun','mon','tue','wed','thu','fri','sat']
+      const daysArr: string[] = Array.isArray((todo as any).days) ? (todo as any).days : []
+      return daysArr.includes(map[d.getUTCDay()])
+    }
+    if (recurring === 'monthly') {
+      const baseDay = new Date(baseISO + 'T00:00:00Z').getUTCDate()
+      return d.getUTCDate() === baseDay
+    }
+    return false
+  }
+
   // Filter tasks for selected date
   const filtered = useMemo(() => {
     const currentSelectedDate = internalSelectedDate
     
     const result = todos
       .filter((t) => {
-        if (!t.scheduledDate) return false
-        
-        // Handle different date formats from the database (scheduledDate is a string in our types)
-        const sd = t.scheduledDate
-        const taskDate = sd.includes('T') ? sd.split('T')[0] : sd
-        
-        return taskDate === currentSelectedDate
+        return occursOn(t, currentSelectedDate)
       })
       .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
     
