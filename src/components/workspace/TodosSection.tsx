@@ -1032,7 +1032,7 @@ export default function TodosSection({
                       <div className="flex flex-col justify-between gap-1 flex-1 min-w-0">
                         <Label
                           htmlFor={`todo-${todo._id}`}
-                          className={`text font-semibold truncate cursor-pointer block ${
+                          className={`text-sm leading-5 font-semibold truncate cursor-pointer block ${
                             todo.isCompleted
                               ? "line-through text-gray-400"
                               : "text-gray-900"
