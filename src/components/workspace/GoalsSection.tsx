@@ -313,7 +313,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
       </Dialog>
 
       {/* Goals Grid */}
-      <div className="flex flex-wrap gap-4 items-start">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
         {goals.map((goal) => {
           const urgency = getUrgencyLevel(goal.targetDate)
           const textClass =
@@ -336,10 +336,10 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
           return (
             <div
               key={goal._id}
-              className={`bg-white p-6 rounded-lg border border-gray-200 transition-shadow w-[320px]`}
+              className={`bg-white p-4 rounded-lg border border-gray-200 transition-shadow w-full`}
             >
               {/* Dates Row */}
-              <div className={`flex items-center justify-between text-xs ${textClass} mb-3`}>
+              <div className={`flex items-center justify-between text-xs ${textClass} mb-2`}>
                 <div className="flex items-center gap-2">
                   <Calendar className={`h-3.5 w-3.5 ${textClass}`} />
                   <span>{new Date(goal.createdAt).toLocaleDateString()}</span>
@@ -354,10 +354,10 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-base font-semibold text-gray-900 mb-1.5">
                     {goal.title}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2 overflow-hidden text-ellipsis h-10">
+                  <p className="text-gray-600 text-sm mb-2 line-clamp-2 overflow-hidden text-ellipsis h-10">
                     {goal.description}
                   </p>
                 </div>
@@ -390,7 +390,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
               </div>
 
               {/* Status and Category */}
-              <div className="flex items-center justify-between mt-1 mb-4">
+              <div className="flex items-center justify-between mt-1 mb-3">
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
                     goal.status
@@ -408,10 +408,10 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
               </div>
 
               {/* Progress Bar */}
-              <div className="mb-4">
-                <div className="w-full bg-gray-200 h-10 relative overflow-hidden">
+              <div className="mb-3">
+                <div className="w-full bg-gray-200 h-8 relative overflow-hidden">
                   <div
-                    className="bg-indigo-600 h-10 transition-all duration-300"
+                    className="bg-indigo-600 h-8 transition-all duration-300"
                     style={{ width: `${goal.progress}%` }}
                   ></div>
                   <div className={`absolute inset-0 flex items-center justify-center text-sm md:text-base font-semibold ${goal.progress > 50 ? "text-white" : "text-gray-800"}`}>
