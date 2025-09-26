@@ -470,16 +470,9 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             No goals yet
           </h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600">
             Start by creating your first goal to track your progress
           </p>
-          <Button
-            onClick={() => setShowAddForm(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Your First Goal
-          </Button>
         </div>
       )}
 

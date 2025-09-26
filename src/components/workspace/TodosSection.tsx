@@ -1141,21 +1141,13 @@ export default function TodosSection({
             <h3 className="text-base font-medium text-gray-900 mb-2">
               No todos found
             </h3>
-            <p className="text-gray-600 mb-4 max-w-md text-sm mx-auto">
+            <p className="text-gray-600 max-w-md text-sm mx-auto">
               {filter === "all"
                 ? "Start by creating your first todo to organize your day"
                 : filter === "upcoming"
                 ? "No upcoming todos found. Schedule some tasks for the future!"
                 : `No ${filter} todos found. Try changing the filter or add new todos.`}
             </p>
-            <Button
-              onClick={() => {
-                setShowTodoForm(true)
-              }}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2"
-            >
-              Create Your First Todo
-            </Button>
           </div>
         </div>
       )}

@@ -352,19 +352,12 @@ export default function NotesSection() {
         <div className="text-center flex-1 min-h-0 grid place-items-center">
           <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No notes found</h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600">
             {searchTerm || selectedCategory !== "all"
               ? "Try adjusting your search or filters"
               : "Start by creating your first note to capture your ideas"
             }
           </p>
-          <Button
-            onClick={() => setShowAddForm(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Your First Note
-          </Button>
         </div>
       )}
     </div>

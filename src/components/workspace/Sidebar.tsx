@@ -131,19 +131,12 @@ export default function Sidebar({
 
             {showUserMenu && (
               <div className="absolute bottom-full left-0 mb-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <div className="px-4 py-2 border-b border-gray-100">
+                <button 
+                  onClick={() => { router.push("/profile"); setShowUserMenu(false) }} 
+                  className="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-gray-50"
+                >
                   <p className="text-sm font-medium text-gray-900">{authUser?.email || "user@example.com"}</p>
                   <p className="text-xs text-gray-500">Free Trial</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    router.push("/profile")
-                    setShowUserMenu(false)
-                  }} 
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                >
-                  <UserCircle className="h-4 w-4" />
-                  <span>Edit Profile</span>
                 </button>
                 <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
                   <LogOut className="h-4 w-4" />

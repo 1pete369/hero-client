@@ -459,14 +459,7 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
         <div className="text-center flex-1 min-h-0 grid place-items-center">
           <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No habits yet</h3>
-          <p className="text-gray-600 mb-4">Start building your first habit to create lasting change</p>
-          <Button
-            onClick={() => setShowAddForm(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Your First Habit
-          </Button>
+          <p className="text-gray-600">Start building your first habit to create lasting change</p>
         </div>
       )}
 

@@ -1,160 +1,19 @@
 "use client";
 
 import { useAuth } from "@/context/useAuthContext";
-import { profileService, UpdateProfileData } from "@/services/profile.service";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Loader2, Save, User, Mail, AtSign } from "lucide-react";
-import { ChangeEvent, FormEvent, useState, useRef, useEffect } from "react";
-import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import { Loader2, User, Mail, Calendar, Shield, Cog, Pencil } from "lucide-react";
+import { useEffect } from "react";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const { authUser, checkAuth } = useAuth();
-  const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [formData, setFormData] = useState({
-    fullName: authUser?.fullName || "",
-    username: authUser?.username || "",
-    email: authUser?.email || "",
-    profilePic: authUser?.profilePic || "",
-    profilePicPublicId: "", // Store Cloudinary public ID for deletion
-  });
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Update form data when authUser changes
-  useEffect(() => {
-    if (authUser) {
-      setFormData({
-        fullName: authUser.fullName || "",
-        username: authUser.username || "",
-        email: authUser.email || "",
-        profilePic: authUser.profilePic || "",
-        profilePicPublicId: "", // We'll extract this from the URL if needed
-      });
-    }
-  }, [authUser]);
+  useEffect(() => { checkAuth(); }, []);
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
-    }
-  };
-
-  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error("Please select a valid image file");
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size must be less than 5MB");
-      return;
-    }
-
-    setIsUploadingImage(true);
-    try {
-      const response = await profileService.uploadProfilePicture(file);
-      setFormData(prev => ({ 
-        ...prev, 
-        profilePic: response.imageUrl,
-        profilePicPublicId: response.publicId 
-      }));
-      toast.success("Profile picture updated!");
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "Failed to upload image";
-      toast.error(errorMessage);
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = "Full name is required";
-    }
-
-    if (!formData.username.trim()) {
-      newErrors.username = "Username is required";
-    } else if (formData.username.length < 3) {
-      newErrors.username = "Username must be at least 3 characters";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const updateData: UpdateProfileData = {
-        fullName: formData.fullName.trim(),
-        username: formData.username.trim(),
-        email: formData.email.trim(),
-        profilePic: formData.profilePic,
-      };
-
-      await profileService.updateProfile(updateData);
-      
-      // Refresh auth context to get updated user data
-      await checkAuth();
-      
-      toast.success("Profile updated successfully!");
-      router.push("/workspace");
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "Failed to update profile";
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRemoveImage = async () => {
-    if (formData.profilePicPublicId) {
-      try {
-        await profileService.deleteProfilePicture(formData.profilePicPublicId);
-      } catch (error) {
-        console.error("Failed to delete image from Cloudinary:", error);
-        // Continue with local removal even if Cloudinary deletion fails
-      }
-    }
-    setFormData(prev => ({ 
-      ...prev, 
-      profilePic: "",
-      profilePicPublicId: ""
-    }));
-    toast.success("Profile picture removed!");
-  };
+  const joined = authUser?.createdAt ? new Date(authUser.createdAt).toLocaleDateString() : "—";
 
   if (!authUser) {
     return (
@@ -169,152 +28,56 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Profile</h1>
-          <p className="text-gray-600">Update your personal information and profile picture</p>
+      <div className="max-w-3xl mx-auto px-4 space-y-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={authUser?.profilePic || ""} alt={authUser?.fullName || "User"} />
+              <AvatarFallback>{(authUser?.fullName?.[0] || authUser?.username?.[0] || "U").toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{authUser?.fullName}</h1>
+              <p className="text-gray-600">@{authUser?.username}</p>
+              <p className="text-sm text-gray-500 flex items-center gap-2 mt-1"><Calendar className="h-4 w-4" /> Joined {joined}</p>
+            </div>
+          </div>
+          <Button asChild>
+            <Link href="/profile/edit" className="flex items-center gap-2"><Pencil className="h-4 w-4" /> Edit Profile</Link>
+          </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Profile Information
-            </CardTitle>
-            <CardDescription>
-              Make changes to your profile here. Click save when you're done.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Profile Picture Section */}
-              <div className="flex flex-col items-center space-y-4">
-                <div className="relative">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={formData.profilePic} alt="Profile" />
-                    <AvatarFallback className="text-lg">
-                      {formData.fullName.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingImage}
-                  >
-                    {isUploadingImage ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Camera className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                {formData.profilePic && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRemoveImage}
-                  >
-                    Remove
-                  </Button>
-                )}
-                
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><User className="h-4 w-4" /> Account</CardTitle>
+              <CardDescription>Your public profile details</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-sm"><span className="text-gray-500">Full name:</span> <span className="font-medium">{authUser?.fullName}</span></div>
+              <div className="text-sm"><span className="text-gray-500">Username:</span> <span className="font-medium">@{authUser?.username}</span></div>
+              <div className="text-sm flex items-center gap-2"><Mail className="h-4 w-4 text-gray-500" /> <span className="font-medium">{authUser?.email}</span></div>
+            </CardContent>
+          </Card>
 
-              {/* Form Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Full Name
-                  </Label>
-                  <Input
-                    id="fullName"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    placeholder="Enter your full name"
-                    className={errors.fullName ? "border-red-500" : ""}
-                  />
-                  {errors.fullName && (
-                    <p className="text-sm text-red-500">{errors.fullName}</p>
-                  )}
-                </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Shield className="h-4 w-4" /> Security</CardTitle>
+              <CardDescription>Security overview</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-gray-600 space-y-2">
+              <div>Two-factor authentication: <span className="font-medium">Not enabled</span></div>
+              <div>Active sessions: <span className="font-medium">1</span></div>
+            </CardContent>
+          </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="flex items-center gap-2">
-                    <AtSign className="h-4 w-4" />
-                    Username
-                  </Label>
-                  <Input
-                    id="username"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    placeholder="Enter your username"
-                    className={errors.username ? "border-red-500" : ""}
-                  />
-                  {errors.username && (
-                    <p className="text-sm text-red-500">{errors.username}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email Address
-                </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Enter your email address"
-                  className={errors.email ? "border-red-500" : ""}
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email}</p>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-4 pt-4">
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex items-center gap-2"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  {isLoading ? "Saving..." : "Save Changes"}
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/workspace")}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Cog className="h-4 w-4" /> Preferences</CardTitle>
+              <CardDescription>Personalization settings</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-gray-600">Timezone, locale, theme preferences will appear here.</CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
