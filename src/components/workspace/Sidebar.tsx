@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useAuth } from "@/context/useAuthContext"
-import { Bell, Settings, LogOut, User } from "lucide-react"
+import { Bell, Settings, LogOut, User, UserCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useRouter } from "next/navigation"
 
 interface SidebarProps {
   activeSection: string
@@ -17,6 +19,7 @@ export default function Sidebar({
   isMobileMenuOpen,
 }: SidebarProps) {
   const { authUser, logout } = useAuth()
+  const router = useRouter()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
@@ -113,11 +116,16 @@ export default function Sidebar({
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="w-full justify-start p-2 hover:bg-gray-100"
             >
-              <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                <User className="h-3 w-3 text-indigo-600" />
+              <div className="mr-3">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={authUser?.profilePic || ""} alt={authUser?.fullName || "User"} />
+                  <AvatarFallback className="bg-indigo-100 text-indigo-700 text-xs">
+                    {(authUser?.fullName?.[0] || authUser?.username?.[0] || "U").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
               </div>
-              <span className="text-sm text-gray-700 font-medium">
-                {authUser?.email?.split("@")[0] || "User"}
+              <span className="text-sm text-gray-700 font-medium truncate">
+                {authUser?.username || authUser?.email?.split("@")[0] || "User"}
               </span>
             </Button>
 
@@ -127,6 +135,16 @@ export default function Sidebar({
                   <p className="text-sm font-medium text-gray-900">{authUser?.email || "user@example.com"}</p>
                   <p className="text-xs text-gray-500">Free Trial</p>
                 </div>
+                <button 
+                  onClick={() => {
+                    router.push("/profile")
+                    setShowUserMenu(false)
+                  }} 
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                >
+                  <UserCircle className="h-4 w-4" />
+                  <span>Edit Profile</span>
+                </button>
                 <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
                   <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>

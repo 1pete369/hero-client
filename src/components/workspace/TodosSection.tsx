@@ -980,9 +980,10 @@ export default function TodosSection({
 
 
       {/* Todos List */}
-      <div className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-hide">
-        {groupedTodos.map((group) => (
-          <div key={group.date} className="space-y-3">
+      {filteredTodos.length > 0 && (
+        <div className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-hide">
+          {groupedTodos.map((group) => (
+            <div key={group.date} className="space-y-3">
             {/* Date Section Header */}
             <div className="flex items-center gap-3">
               <div className="w-1 h-6 bg-indigo-600 rounded-full"></div>
@@ -1127,13 +1128,14 @@ export default function TodosSection({
                 </div>
               ))}
             </div>
-          </div>
-        ))}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
       {filteredTodos.length === 0 && !showTodoForm && (
-        <div className="w-full flex items-center justify-center py-24">
+        <div className="w-full flex-1 min-h-0 grid place-items-center">
           <div className="text-center">
             <CheckCircle className="h-12 w-12 text-gray-300 mb-3 mx-auto" />
             <h3 className="text-base font-medium text-gray-900 mb-2">
