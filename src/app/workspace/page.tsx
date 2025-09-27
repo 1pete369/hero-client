@@ -36,6 +36,7 @@ export default function WorkspacePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showTodoForm, setShowTodoForm] = useState(false)
   const [showFinanceForm, setShowFinanceForm] = useState(false)
+  const [financeViewMode, setFinanceViewMode] = useState<"list" | "dashboard">("list")
   const [showGoalsForm, setShowGoalsForm] = useState(false)
   const [showHabitsForm, setShowHabitsForm] = useState(false)
   const [showTimelineModal, setShowTimelineModal] = useState(false)
@@ -187,9 +188,10 @@ export default function WorkspacePage() {
         return <JournalsSection />
       case "finance":
         return (
-          <FinanceSection
-            showFinanceForm={showFinanceForm}
-            setShowFinanceForm={setShowFinanceForm}
+          <FinanceSection 
+            viewMode={financeViewMode}
+            showTransactionForm={showFinanceForm}
+            setShowTransactionForm={setShowFinanceForm}
           />
         )
       default:
@@ -226,10 +228,13 @@ export default function WorkspacePage() {
               <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0">
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">
-                    Good {greeting}!
+                    {activeSection === "finance" ? "Finance" : `Good ${greeting}!`}
                   </h1>
                   <p className="text-gray-600 text-xs truncate">
-                    Manage your daily tasks and priorities
+                    {activeSection === "finance" 
+                      ? "Track your income and expenses" 
+                      : "Manage your daily tasks and priorities"
+                    }
                   </p>
                 </div>
                 <Button
@@ -307,6 +312,36 @@ export default function WorkspacePage() {
                      </DropdownMenuContent>
                    </DropdownMenu>
                  )}
+
+                {/* Finance View Toggle */}
+                {activeSection === "finance" && (
+                  <div className="flex items-center bg-indigo-100 rounded-lg p-1">
+                    <Button
+                      variant={financeViewMode === "list" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setFinanceViewMode("list")}
+                      className={`px-3 text-xs ${
+                        financeViewMode === "list" 
+                          ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+                          : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                      }`}
+                    >
+                      List
+                    </Button>
+                    <Button
+                      variant={financeViewMode === "dashboard" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setFinanceViewMode("dashboard")}
+                      className={`px-3 text-xs ${
+                        financeViewMode === "dashboard" 
+                          ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+                          : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                      }`}
+                    >
+                      Dashboard
+                    </Button>
+                  </div>
+                )}
 
                 {activeSection === "todos" && (
                   <>
