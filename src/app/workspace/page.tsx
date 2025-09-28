@@ -47,6 +47,7 @@ export default function WorkspacePage() {
   const [financeViewMode, setFinanceViewMode] = useState<"list" | "dashboard">("list")
   const [financeTimeRange, setFinanceTimeRange] = useState("365")
   const [todosRefreshTrigger, setTodosRefreshTrigger] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
   const [showGoalsForm, setShowGoalsForm] = useState(false)
   const [showHabitsForm, setShowHabitsForm] = useState(false)
   const [showTimelineModal, setShowTimelineModal] = useState(false)
@@ -186,11 +187,23 @@ export default function WorkspacePage() {
             {showTimelineModal && (
               <div 
                 className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
-                onClick={() => setShowTimelineModal(false)}
+                onClick={(e) => {
+                  // Only close if clicking on the backdrop itself, not on child elements, and not dragging
+                  if (e.target === e.currentTarget && !isDragging) {
+                    setShowTimelineModal(false)
+                  }
+                }}
+                onTouchStart={(e) => {
+                  // Prevent touch events from bubbling up during drag
+                  if (e.target !== e.currentTarget) {
+                    e.stopPropagation()
+                  }
+                }}
               >
                 <div 
                   className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col animate-in slide-in-from-bottom-4 duration-300 ease-out"
                   onClick={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between p-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900">Timeline</h2>
@@ -212,6 +225,7 @@ export default function WorkspacePage() {
                         setShowTimelineModal(false)
                       }}
                       onTodoUpdate={reloadTodos}
+                      onDragStateChange={setIsDragging}
                       showHeader={false}
                     />
                   </div>
