@@ -4,20 +4,8 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { Clock, Dot, ChevronLeft, ChevronRight } from "lucide-react"
 import type { Todo } from "@/services"
 import { updateTodo } from "@/services"
-import {
-  DndContext,
-  DragEndEvent,
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  closestCenter,
-} from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
-import { useDraggable } from '@dnd-kit/core'
 
-// Simple Draggable Timeline Block Component
+// Custom Draggable Timeline Block Component for Mobile
 function DraggableTimelineBlock({ 
   todo, 
   top, 
@@ -32,9 +20,10 @@ function DraggableTimelineBlock({
   currentMinute,
   COLOR_LEFT,
   COLOR_BLOCK,
-  isPressing,
-  onPressStart,
-  onPressEnd
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  isDragging
 }: {
   todo: Todo
   top: number
@@ -49,37 +38,75 @@ function DraggableTimelineBlock({
   currentMinute: () => number
   COLOR_LEFT: Record<string, string>
   COLOR_BLOCK: Record<string, string>
-  isPressing: boolean
-  onPressStart: () => void
-  onPressEnd: () => void
+  onDragStart: (todo: Todo, startY: number) => void
+  onDragMove: (deltaY: number) => void
+  onDragEnd: () => void
+  isDragging: boolean
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-  } = useDraggable({
-    id: todo._id,
-  })
-
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    top,
-    height,
-    width,
-    left,
-  }
+  const [isPressing, setIsPressing] = useState(false)
+  const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null)
+  const [dragOffset, setDragOffset] = useState(0)
+  const startYRef = useRef(0)
 
   const live = isToday && currentMinute() >= start && currentMinute() < end
   const colorKey = (todo.color ?? "blue") as string
   const leftColor = COLOR_LEFT[colorKey] ?? COLOR_LEFT.blue
   const blockColor = COLOR_BLOCK[colorKey] ?? COLOR_BLOCK.blue
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    setIsPressing(true)
+    const touch = e.touches[0]
+    startYRef.current = touch.clientY
+    
+    // Start press timer for visual feedback
+    const timer = setTimeout(() => {
+      // After 200ms, show that drag is ready
+    }, 200)
+    setPressTimer(timer)
+    
+    onDragStart(todo, touch.clientY)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPressing) return
+    
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const touch = e.touches[0]
+    const deltaY = touch.clientY - startYRef.current
+    setDragOffset(deltaY)
+    onDragMove(deltaY)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    setIsPressing(false)
+    setDragOffset(0)
+    if (pressTimer) {
+      clearTimeout(pressTimer)
+      setPressTimer(null)
+    }
+    
+    onDragEnd()
+  }
+
+  const style = {
+    top,
+    height,
+    width,
+    left,
+    transform: isDragging ? `translateY(${dragOffset}px)` : undefined,
+    touchAction: 'none' as const, // Critical for mobile drag functionality
+  }
+
   return (
     <div
-      ref={setNodeRef}
       style={style}
       className={[
         "absolute rounded-md border shadow-sm transition",
@@ -92,11 +119,9 @@ function DraggableTimelineBlock({
         isPressing ? "scale-105 shadow-lg z-40" : "",
       ].join(" ")}
       aria-label={`Press and hold to drag ${todo.title}`}
-      onTouchStart={onPressStart}
-      onTouchEnd={onPressEnd}
-      onTouchCancel={onPressEnd}
-      {...listeners}
-      {...attributes}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div className="flex h-full flex-col px-2.5 py-1.5">
         <div className="flex items-center justify-between">
@@ -259,25 +284,11 @@ export default function TimelineView({
   const selectedDate = propSelectedDate || getLocalDateString(new Date())
   const [internalSelectedDate, setInternalSelectedDate] = useState(selectedDate)
 
-  // DndKit drag state
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [activeTodo, setActiveTodo] = useState<Todo | null>(null)
-  const [isPressing, setIsPressing] = useState<string | null>(null)
-  
-  // Configure sensors for better drag experience (including touch)
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // Require 8px of movement before drag starts
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250, // Press and hold for 250ms to start drag
-        tolerance: 5, // Allow small movement during press and hold
-      },
-    })
-  )
+  // Custom drag state
+  const [draggedTodo, setDraggedTodo] = useState<Todo | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStartY, setDragStartY] = useState(0)
+  const [currentDragY, setCurrentDragY] = useState(0)
 
   // Returns true if a todo occurs on the given YYYY-MM-DD date considering recurrence
   const occursOn = (todo: Todo, dateISO: string) => {
@@ -345,55 +356,42 @@ export default function TimelineView({
     setInternalSelectedDate(getLocalDateString(new Date()))
   }
 
-  // DndKit drag handlers
+  // Custom drag handlers
   const minutesToTime = (minutes: number): string => {
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
   }
 
-  const handleDragStart = (event: DragStartEvent) => {
-    console.log('Drag started!', event)
-    const { active } = event
-    setActiveId(active.id as string)
-    
-    // Find the todo being dragged
-    const todo = todos.find(t => t._id === active.id)
-    if (todo) {
-      setActiveTodo(todo)
-      console.log('Dragging todo:', todo.title)
+  const handleDragStart = useCallback((todo: Todo, startY: number) => {
+    console.log('Drag started for todo:', todo.title)
+    setDraggedTodo(todo)
+    setDragStartY(startY)
+    setCurrentDragY(startY)
+    setIsDragging(true)
+  }, [])
+
+  const handleDragMove = useCallback((deltaY: number) => {
+    if (isDragging) {
+      setCurrentDragY(dragStartY + deltaY)
     }
-  }
+  }, [isDragging, dragStartY])
 
-  const handlePressStart = (todoId: string) => {
-    setIsPressing(todoId)
-  }
+  const handleDragEnd = useCallback(async () => {
+    if (!draggedTodo) return
 
-  const handlePressEnd = () => {
-    setIsPressing(null)
-  }
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, delta } = event
+    console.log('Drag ended for todo:', draggedTodo.title)
     
-    // Reset pressing state when drag ends
-    setIsPressing(null)
-    
-    if (!activeTodo || !delta.y) {
-      setActiveId(null)
-      setActiveTodo(null)
-      return
-    }
-
     // Calculate new time based on drag distance
-    const deltaMinutes = Math.round(delta.y / MINUTE_TO_PX)
-    const originalStartMinutes = timeToMinutes(activeTodo.startTime)
-    const originalEndMinutes = timeToMinutes(activeTodo.endTime)
+    const deltaY = currentDragY - dragStartY
+    const deltaMinutes = Math.round(deltaY / MINUTE_TO_PX)
+    const originalStartMinutes = timeToMinutes(draggedTodo.startTime)
+    const originalEndMinutes = timeToMinutes(draggedTodo.endTime)
     const duration = originalEndMinutes - originalStartMinutes
     
     // Round to nearest 5-minute interval
-    const newStartMinutes = Math.max(0, Math.min(1435, Math.round((originalStartMinutes + deltaMinutes) / 5) * 5)) // 1435 = 23:55 (last 5-min slot)
-    const newEndMinutes = Math.max(5, Math.min(1440, newStartMinutes + duration)) // 1440 = 24:00
+    const newStartMinutes = Math.max(0, Math.min(1435, Math.round((originalStartMinutes + deltaMinutes) / 5) * 5))
+    const newEndMinutes = Math.max(5, Math.min(1440, newStartMinutes + duration))
     
     const newStartTime = minutesToTime(newStartMinutes)
     const newEndTime = minutesToTime(newEndMinutes)
@@ -401,7 +399,7 @@ export default function TimelineView({
     try {
       // Update the todo in the backend
       await updateTodo({
-        _id: activeTodo._id,
+        _id: draggedTodo._id,
         startTime: newStartTime,
         endTime: newEndTime
       })
@@ -412,10 +410,11 @@ export default function TimelineView({
       console.error('Failed to update todo time:', error)
     }
 
-    setActiveId(null)
-    setActiveTodo(null)
-  }
-
+    setDraggedTodo(null)
+    setIsDragging(false)
+    setDragStartY(0)
+    setCurrentDragY(0)
+  }, [draggedTodo, dragStartY, currentDragY, onTodoUpdate])
 
   // Auto-scroll to first task or current time
   useEffect(() => {
@@ -497,13 +496,7 @@ export default function TimelineView({
 
        {/* Body — fills parent card neatly */}
        <div className="relative flex-1 overflow-hidden">
-         <DndContext
-           sensors={sensors}
-           collisionDetection={closestCenter}
-           onDragStart={handleDragStart}
-           onDragEnd={handleDragEnd}
-         >
-           <div ref={scrollRef} className="relative h-full w-full overflow-y-auto scrollbar-hide">
+         <div ref={scrollRef} className="relative h-full w-full overflow-y-auto scrollbar-hide">
           {/* Full-day canvas */}
           <div className="relative pt-6" style={{ height: 24 * HOUR_HEIGHT }}>
             {/* Hour lines */}
@@ -558,18 +551,16 @@ export default function TimelineView({
                     currentMinute={currentMinute}
                     COLOR_LEFT={COLOR_LEFT}
                     COLOR_BLOCK={COLOR_BLOCK}
-                    isPressing={isPressing === todo._id}
-                    onPressStart={() => handlePressStart(todo._id)}
-                    onPressEnd={handlePressEnd}
+                    onDragStart={handleDragStart}
+                    onDragMove={handleDragMove}
+                    onDragEnd={handleDragEnd}
+                    isDragging={isDragging && draggedTodo?._id === todo._id}
                   />
                 )
               })}
             </div>
           </div>
-
-
         </div>
-        </DndContext>
       </div>
     </div>
   )
