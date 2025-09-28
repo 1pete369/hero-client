@@ -31,7 +31,10 @@ function DraggableTimelineBlock({
   isToday,
   currentMinute,
   COLOR_LEFT,
-  COLOR_BLOCK
+  COLOR_BLOCK,
+  isPressing,
+  onPressStart,
+  onPressEnd
 }: {
   todo: Todo
   top: number
@@ -46,6 +49,9 @@ function DraggableTimelineBlock({
   currentMinute: () => number
   COLOR_LEFT: Record<string, string>
   COLOR_BLOCK: Record<string, string>
+  isPressing: boolean
+  onPressStart: () => void
+  onPressEnd: () => void
 }) {
   const {
     attributes,
@@ -83,8 +89,12 @@ function DraggableTimelineBlock({
         leftColor,
         blockColor,
         isDragging ? "cursor-grabbing shadow-lg z-50 opacity-80" : "cursor-grab",
+        isPressing ? "scale-105 shadow-lg z-40" : "",
       ].join(" ")}
-      aria-label={`Drag ${todo.title}`}
+      aria-label={`Press and hold to drag ${todo.title}`}
+      onTouchStart={onPressStart}
+      onTouchEnd={onPressEnd}
+      onTouchCancel={onPressEnd}
       {...listeners}
       {...attributes}
     >
@@ -252,6 +262,7 @@ export default function TimelineView({
   // DndKit drag state
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null)
+  const [isPressing, setIsPressing] = useState<string | null>(null)
   
   // Configure sensors for better drag experience (including touch)
   const sensors = useSensors(
@@ -262,8 +273,8 @@ export default function TimelineView({
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 0, // No delay for immediate touch response
-        tolerance: 3, // Very small tolerance for immediate drag start
+        delay: 250, // Press and hold for 250ms to start drag
+        tolerance: 5, // Allow small movement during press and hold
       },
     })
   )
@@ -354,8 +365,19 @@ export default function TimelineView({
     }
   }
 
+  const handlePressStart = (todoId: string) => {
+    setIsPressing(todoId)
+  }
+
+  const handlePressEnd = () => {
+    setIsPressing(null)
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, delta } = event
+    
+    // Reset pressing state when drag ends
+    setIsPressing(null)
     
     if (!activeTodo || !delta.y) {
       setActiveId(null)
@@ -536,6 +558,9 @@ export default function TimelineView({
                     currentMinute={currentMinute}
                     COLOR_LEFT={COLOR_LEFT}
                     COLOR_BLOCK={COLOR_BLOCK}
+                    isPressing={isPressing === todo._id}
+                    onPressStart={() => handlePressStart(todo._id)}
+                    onPressEnd={handlePressEnd}
                   />
                 )
               })}
