@@ -117,7 +117,6 @@ interface TimelineViewProps {
   onDeleteTodo?: (todoId: string) => void
   onToggleStatus?: (todoId: string, isCompleted: boolean) => void
   onTodoUpdate?: () => void
-  onDragStateChange?: (isDragging: boolean) => void
 }
 
 /* ------------ Compact design constants (right panel) ------------ */
@@ -240,7 +239,6 @@ export default function TimelineView({
   onDeleteTodo,
   onToggleStatus,
   onTodoUpdate,
-  onDragStateChange,
 }: TimelineViewProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   // Get today's date in local timezone to avoid UTC conversion issues
@@ -348,9 +346,6 @@ export default function TimelineView({
     const { active } = event
     setActiveId(active.id as string)
     
-    // Notify parent that dragging has started
-    onDragStateChange?.(true)
-    
     // Find the todo being dragged
     const todo = todos.find(t => t._id === active.id)
     if (todo) {
@@ -360,9 +355,6 @@ export default function TimelineView({
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, delta } = event
-    
-    // Notify parent that dragging has ended
-    onDragStateChange?.(false)
     
     if (!activeTodo || !delta.y) {
       setActiveId(null)
@@ -401,12 +393,6 @@ export default function TimelineView({
     setActiveTodo(null)
   }
 
-  // Cleanup: reset drag state when component unmounts
-  useEffect(() => {
-    return () => {
-      onDragStateChange?.(false)
-    }
-  }, [onDragStateChange])
 
   // Auto-scroll to first task or current time
   useEffect(() => {
