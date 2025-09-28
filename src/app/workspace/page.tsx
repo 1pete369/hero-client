@@ -12,6 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import Sidebar from "@/components/workspace/Sidebar"
 
 import TodosSection from "@/components/workspace/TodosSection"
@@ -37,6 +44,7 @@ export default function WorkspacePage() {
   const [showTodoForm, setShowTodoForm] = useState(false)
   const [showFinanceForm, setShowFinanceForm] = useState(false)
   const [financeViewMode, setFinanceViewMode] = useState<"list" | "dashboard">("list")
+  const [financeTimeRange, setFinanceTimeRange] = useState("365")
   const [showGoalsForm, setShowGoalsForm] = useState(false)
   const [showHabitsForm, setShowHabitsForm] = useState(false)
   const [showTimelineModal, setShowTimelineModal] = useState(false)
@@ -192,6 +200,7 @@ export default function WorkspacePage() {
             viewMode={financeViewMode}
             showTransactionForm={showFinanceForm}
             setShowTransactionForm={setShowFinanceForm}
+            timeRange={financeTimeRange}
           />
         )
       default:
@@ -315,31 +324,48 @@ export default function WorkspacePage() {
 
                 {/* Finance View Toggle */}
                 {activeSection === "finance" && (
-                  <div className="flex items-center bg-indigo-100 rounded-lg p-1">
-                    <Button
-                      variant={financeViewMode === "list" ? "default" : "ghost"}
-                      size="sm"
-                      onClick={() => setFinanceViewMode("list")}
-                      className={`px-3 text-xs ${
-                        financeViewMode === "list" 
-                          ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
-                          : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                      }`}
-                    >
-                      List
-                    </Button>
-                    <Button
-                      variant={financeViewMode === "dashboard" ? "default" : "ghost"}
-                      size="sm"
-                      onClick={() => setFinanceViewMode("dashboard")}
-                      className={`px-3 text-xs ${
-                        financeViewMode === "dashboard" 
-                          ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
-                          : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                      }`}
-                    >
-                      Dashboard
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-indigo-100 rounded-lg p-1">
+                      <Button
+                        variant={financeViewMode === "list" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setFinanceViewMode("list")}
+                        className={`px-3 text-xs ${
+                          financeViewMode === "list" 
+                            ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+                            : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                        }`}
+                      >
+                        List
+                      </Button>
+                      <Button
+                        variant={financeViewMode === "dashboard" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setFinanceViewMode("dashboard")}
+                        className={`px-3 text-xs ${
+                          financeViewMode === "dashboard" 
+                            ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+                            : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                        }`}
+                      >
+                        Dashboard
+                      </Button>
+                    </div>
+                    
+                    {/* Time Range Selector - only show in dashboard mode */}
+                    {financeViewMode === "dashboard" && (
+                      <Select value={financeTimeRange} onValueChange={setFinanceTimeRange}>
+                        <SelectTrigger className="w-32 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="7">Last 7 days</SelectItem>
+                          <SelectItem value="30">Last 30 days</SelectItem>
+                          <SelectItem value="90">Last 90 days</SelectItem>
+                          <SelectItem value="365">All time</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 )}
 

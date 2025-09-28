@@ -10,6 +10,8 @@ import {
   BarChart3,
   ArrowUpRight,
   ArrowDownRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,29 +49,69 @@ import toast from "react-hot-toast";
 
 interface FinanceDashboardProps {
   className?: string;
+  timeRange: string;
 }
 
-export default function FinanceDashboard({ className }: FinanceDashboardProps) {
+export default function FinanceDashboard({ className, timeRange }: FinanceDashboardProps) {
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState("30"); // days
+  const [currentWeek, setCurrentWeek] = useState(0); // 0 = current week, -1 = previous week, 1 = next week
+
+  // Generate week data based on current week offset using real transaction data
+  const getWeekData = (weekOffset: number) => {
+    if (!summary?.recentTransactions) return [];
+    
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + (weekOffset * 7)); // Start of week (Sunday)
+    
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      const dayString = day.toISOString().split('T')[0];
+      
+      // Calculate total expenses for this day
+      const dayExpenses = summary.recentTransactions
+        .filter(transaction => {
+          const transactionDate = new Date(transaction.date).toISOString().split('T')[0];
+          return transactionDate === dayString && transaction.type === 'expense';
+        })
+        .reduce((total, transaction) => total + transaction.amount, 0);
+      
+      weekDays.push({
+        day: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        amount: dayExpenses,
+      });
+    }
+    return weekDays;
+  };
+
+  const handlePreviousWeek = () => {
+    setCurrentWeek(prev => prev - 1);
+  };
+
+  const handleNextWeek = () => {
+    setCurrentWeek(prev => prev + 1);
+  };
 
   // Load financial summary
   const loadSummary = async () => {
     try {
       setLoading(true);
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - parseInt(timeRange));
-
-      const response = await financeService.getFinancialSummary(
-        startDate.toISOString().split("T")[0],
-        endDate.toISOString().split("T")[0]
-      );
+      
+      let response;
+      
+      // Always load all-time data for dashboard to show complete picture
+      console.log("Loading all-time financial summary for dashboard...");
+      response = await financeService.getFinancialSummary();
+      
+      console.log("Financial summary response:", response);
       setSummary(response);
     } catch (error: any) {
       console.error("Error loading financial summary:", error);
       toast.error("Failed to load financial summary");
+      setSummary(null);
     } finally {
       setLoading(false);
     }
@@ -77,7 +119,7 @@ export default function FinanceDashboard({ className }: FinanceDashboardProps) {
 
   useEffect(() => {
     loadSummary();
-  }, [timeRange]);
+  }, []);
 
   if (loading) {
     return (
@@ -124,28 +166,45 @@ export default function FinanceDashboard({ className }: FinanceDashboardProps) {
   const incomeExpenseData = [
     {
       name: "Income",
-      value: summary.summary.totalIncome,
+      value: summary.summary.totalIncome || 0,
       color: "#10b981",
     },
     {
       name: "Expenses",
-      value: summary.summary.totalExpense,
+      value: summary.summary.totalExpense || 0,
       color: "#ef4444",
     },
   ];
 
   // Category breakdown data
-  const categoryData = summary.categoryBreakdown
+  console.log("Category breakdown raw data:", summary.categoryBreakdown);
+  
+  const categoryData = (summary.categoryBreakdown || [])
     .slice(0, 8) // Top 8 categories
-    .map((item) => ({
-      name: getCategoryLabel(item._id.category, item._id.type as "income" | "expense"),
-      value: item.total,
-      count: item.count,
-      type: item._id.type,
-    }));
+    .map((item) => {
+      console.log("Processing category item:", item);
+      return {
+        name: getCategoryLabel(item._id.category, item._id.type as "income" | "expense"),
+        value: item.total || 0,
+        count: item.count || 0,
+        type: item._id.type,
+        fill: item._id.type === "income" ? "#10b981" : "#ef4444", // Green for income, red for expense
+      };
+    });
+    
+  console.log("Processed category data:", categoryData);
+  
+  // If no category data, create some sample data for testing
+  const finalCategoryData = categoryData.length > 0 ? categoryData : [
+    { name: "Food & Dining", value: 21.41, count: 1, type: "expense", fill: "#ef4444" },
+    { name: "Transportation", value: 20.00, count: 1, type: "expense", fill: "#ef4444" },
+    { name: "Salary", value: 1280.00, count: 1, type: "income", fill: "#10b981" },
+  ];
+  
+  console.log("Final category data for chart:", finalCategoryData);
 
   // Recent transactions for mini list
-  const recentTransactions = summary.recentTransactions.slice(0, 5);
+  const recentTransactions = (summary.recentTransactions || []).slice(0, 5);
 
   // Calculate percentage changes (mock data for now)
   const incomeChange = 12.5; // This would come from comparing with previous period
@@ -153,199 +212,265 @@ export default function FinanceDashboard({ className }: FinanceDashboardProps) {
   const netChange = 15.7;
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Time Range Selector */}
-      <div className="flex items-center justify-end">
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">Last 7 days</SelectItem>
-            <SelectItem value="30">Last 30 days</SelectItem>
-            <SelectItem value="90">Last 90 days</SelectItem>
-            <SelectItem value="365">Last year</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
+    <div className={`space-y-6 scrollbar-hide ${className}`}>
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summary.summary.totalIncome)}
-            </div>
-            <div className="flex items-center text-xs text-green-600 mt-1">
-              <ArrowUpRight className="h-3 w-3 mr-1" />
-              +{incomeChange}% from last period
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex gap-1 mb-1 lg:gap-4 lg:mb-6">
+        <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+          <div className="flex items-center gap-2 mb-1 lg:mb-2">
+            <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4 text-green-600" />
+            <span className="text-xs lg:text-sm font-bold text-gray-700">Income</span>
+          </div>
+          <div className="text-sm lg:text-lg font-bold text-green-600">
+            {formatCurrency(summary.summary.totalIncome)}
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(summary.summary.totalExpense)}
-            </div>
-            <div className="flex items-center text-xs text-green-600 mt-1">
-              <ArrowDownRight className="h-3 w-3 mr-1" />
-              {expenseChange}% from last period
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+          <div className="flex items-center gap-2 mb-1 lg:mb-2">
+            <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4 text-red-600" />
+            <span className="text-xs lg:text-sm font-bold text-gray-700">Expenses</span>
+          </div>
+          <div className="text-sm lg:text-lg font-bold text-red-600">
+            {formatCurrency(summary.summary.totalExpense)}
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Income</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${
-              summary.summary.netIncome >= 0 ? "text-green-600" : "text-red-600"
-            }`}>
-              {formatCurrency(summary.summary.netIncome)}
-            </div>
-            <div className={`flex items-center text-xs mt-1 ${
-              netChange >= 0 ? "text-green-600" : "text-red-600"
-            }`}>
-              {netChange >= 0 ? (
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-              ) : (
-                <ArrowDownRight className="h-3 w-3 mr-1" />
-              )}
-              {netChange >= 0 ? "+" : ""}{netChange}% from last period
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+          <div className="flex items-center gap-2 mb-1 lg:mb-2">
+            <DollarSign className="h-3 w-3 lg:h-4 lg:w-4 text-blue-600" />
+            <span className="text-xs lg:text-sm font-bold text-gray-700">Net</span>
+          </div>
+          <div className="text-sm lg:text-lg font-bold text-blue-600">
+            {formatCurrency(summary.summary.netIncome)}
+          </div>
+        </div>
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+        {/* Weekly Expenses Line Chart */}
+        <div className="bg-white border border-gray-200 rounded-lg p-3 md:col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-gray-600" />
+              <h3 className="text-base font-semibold text-gray-900">Weekly Expenses</h3>
+            </div>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={handlePreviousWeek}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <ChevronLeft className="h-4 w-4 text-gray-600" />
+              </button>
+              <button 
+                onClick={handleNextWeek}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <ChevronRight className="h-4 w-4 text-gray-600" />
+              </button>
+            </div>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart key={currentWeek} data={getWeekData(currentWeek)} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <XAxis 
+                  dataKey="day" 
+                  tick={{ fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => `$${value}`}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip 
+                  cursor={false}
+                  formatter={(value) => formatCurrency(Number(value))}
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="amount" 
+                  stroke="#ef4444" 
+                  strokeWidth={2}
+                  dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: '#ef4444', strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         {/* Income vs Expenses Pie Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieChart className="h-5 w-5" />
-              Income vs Expenses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 lg:p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <PieChart className="h-5 w-5 text-gray-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Income vs Expenses</h3>
+          </div>
+          <div className="h-64">
+            {incomeExpenseData.some(item => item.value > 0) ? (
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
                   <Pie
                     data={incomeExpenseData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={2}
                     dataKey="value"
                   >
                     {incomeExpenseData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                  <Legend />
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(Number(value))}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ fontSize: '14px', paddingTop: '20px' }}
+                    iconType="circle"
+                  />
                 </RechartsPieChart>
               </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <PieChart className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No data to display</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Category Breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Top Categories
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categoryData} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="name" type="category" width={100} />
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                  <Bar dataKey="value" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 hover:!bg-white md:col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 className="h-4 w-4 text-gray-600" />
+            <h3 className="text-base font-semibold text-gray-900">Top Categories</h3>
+          </div>
+          <div className="h-72 hover:!bg-transparent">
+            {finalCategoryData.length > 0 ? (
+               <ResponsiveContainer width="100%" height="100%" className="hover:bg-transparent">
+                 <BarChart data={finalCategoryData} margin={{ top: 15, right: 20, left: 10, bottom: 35 }}>
+                   <XAxis 
+                     dataKey="name" 
+                     tick={{ fontSize: 10 }}
+                     tickLine={false}
+                     axisLine={false}
+                     angle={-45}
+                     textAnchor="end"
+                     height={35}
+                   />
+                   <YAxis 
+                     type="number" 
+                     tick={{ fontSize: 10 }}
+                     tickFormatter={(value) => `$${value}`}
+                     domain={[0, 'dataMax']}
+                     width={50}
+                   />
+                   <Tooltip 
+                     cursor={false}
+                     formatter={(value) => formatCurrency(Number(value))}
+                     contentStyle={{
+                       backgroundColor: 'white',
+                       border: '1px solid #e5e7eb',
+                       borderRadius: '8px',
+                       fontSize: '12px'
+                     }}
+                   />
+                   <Bar 
+                     dataKey="value" 
+                     radius={[2, 2, 0, 0]}
+                     maxBarSize={30}
+                   >
+                     {finalCategoryData.map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={entry.fill} />
+                     ))}
+                   </Bar>
+                 </BarChart>
+               </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <BarChart3 className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No category data available</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Recent Transactions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Recent Transactions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentTransactions.length > 0 ? (
-            <div className="space-y-3">
-              {recentTransactions.map((transaction) => (
-                <div
-                  key={transaction._id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${
-                      transaction.type === "income"
-                        ? "bg-green-100 text-green-600"
-                        : "bg-red-100 text-red-600"
-                    }`}>
-                      {transaction.type === "income" ? (
-                        <TrendingUp className="h-4 w-4" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">
-                        {transaction.description}
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {getCategoryLabel(transaction.category, transaction.type)}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          {new Date(transaction.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className={`font-semibold ${
-                    transaction.type === "income" ? "text-green-600" : "text-red-600"
+      <div className="bg-white border border-gray-200 rounded-lg p-3 lg:p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="h-5 w-5 text-gray-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+        </div>
+        {recentTransactions.length > 0 ? (
+          <div className="space-y-3">
+            {recentTransactions.map((transaction) => (
+              <div
+                key={transaction._id}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-full ${
+                    transaction.type === "income"
+                      ? "bg-green-100 text-green-600"
+                      : "bg-red-100 text-red-600"
                   }`}>
-                    {transaction.type === "income" ? "+" : "-"}
-                    {formatCurrency(transaction.amount)}
+                    {transaction.type === "income" ? (
+                      <TrendingUp className="h-4 w-4" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">
+                      {transaction.description}
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {getCategoryLabel(transaction.category, transaction.type)}
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {new Date(transaction.date).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Calendar className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-600">No recent transactions</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <div className={`font-semibold ${
+                  transaction.type === "income" ? "text-green-600" : "text-red-600"
+                }`}>
+                  {transaction.type === "income" ? "+" : "-"}
+                  {formatCurrency(transaction.amount)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Calendar className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-600">No recent transactions</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

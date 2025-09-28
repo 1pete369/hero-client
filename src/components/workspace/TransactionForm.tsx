@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Calendar, Tag, FileText, RotateCcw } from "lucide-react";
+import { X, Calendar, Tag, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,9 +49,6 @@ export default function TransactionForm({
     description: "",
     date: new Date().toISOString().split("T")[0],
     tags: [],
-    recurring: false,
-    recurringFrequency: "monthly",
-    recurringEndDate: "",
     notes: "",
   });
 
@@ -87,11 +84,6 @@ export default function TransactionForm({
         description: transaction.description,
         date: formatDateForInput(transaction.date),
         tags: transaction.tags || [],
-        recurring: transaction.recurring || false,
-        recurringFrequency: transaction.recurringFrequency || "monthly",
-        recurringEndDate: transaction.recurringEndDate
-          ? formatDateForInput(transaction.recurringEndDate)
-          : "",
         notes: transaction.notes || "",
       });
     } else {
@@ -103,9 +95,6 @@ export default function TransactionForm({
         description: "",
         date: getTodayLocal(),
         tags: [],
-        recurring: false,
-        recurringFrequency: "monthly",
-        recurringEndDate: "",
         notes: "",
       });
     }
@@ -170,17 +159,6 @@ export default function TransactionForm({
       newErrors.date = "Date is required";
     }
 
-    if (formData.recurring && !formData.recurringFrequency) {
-      newErrors.recurringFrequency = "Recurring frequency is required";
-    }
-
-    if (formData.recurring && formData.recurringEndDate) {
-      const endDate = new Date(formData.recurringEndDate);
-      const startDate = new Date(formData.date);
-      if (endDate <= startDate) {
-        newErrors.recurringEndDate = "End date must be after start date";
-      }
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -201,8 +179,6 @@ export default function TransactionForm({
         amount: Number(formData.amount),
         date: formData.date, // Already in YYYY-MM-DD format
         tags: formData.tags,
-        recurring: formData.recurring,
-        recurringEndDate: formData.recurringEndDate || undefined,
       };
 
       if (transaction) {
@@ -364,56 +340,17 @@ export default function TransactionForm({
             )}
           </div>
 
-          {/* Recurring and Notes Row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="recurring"
-                  checked={formData.recurring}
-                  onChange={(e) => handleInputChange("recurring", e.target.checked)}
-                  className="rounded border-gray-300"
-                />
-                <Label htmlFor="recurring" className="text-sm">
-                  Recurring
-                </Label>
-              </div>
-
-              {formData.recurring && (
-                <div className="space-y-2">
-                  <Select
-                    value={formData.recurringFrequency}
-                    onValueChange={(value) => handleInputChange("recurringFrequency", value)}
-                  >
-                    <SelectTrigger className={errors.recurringFrequency ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Frequency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.recurringFrequency && (
-                    <p className="text-xs text-red-500">{errors.recurringFrequency}</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-sm">Notes (Optional)</Label>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => handleInputChange("notes", e.target.value)}
-                placeholder="Add notes..."
-                rows={3}
-                maxLength={200}
-                className="text-sm"
-              />
-            </div>
+          {/* Notes */}
+          <div className="space-y-1">
+            <Label className="text-sm">Notes (Optional)</Label>
+            <Textarea
+              value={formData.notes}
+              onChange={(e) => handleInputChange("notes", e.target.value)}
+              placeholder="Add notes..."
+              rows={3}
+              maxLength={200}
+              className="text-sm"
+            />
           </div>
 
           {/* Action Buttons */}

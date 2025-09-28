@@ -30,6 +30,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  
 } from "@/components/ui/dropdown-menu";
 import {
   financeService,
@@ -47,14 +48,17 @@ interface FinanceSectionProps {
   viewMode: "list" | "dashboard";
   showTransactionForm: boolean;
   setShowTransactionForm: (show: boolean) => void;
+  timeRange: string;
 }
 
-export default function FinanceSection({ 
+export default function FinanceSection({
   viewMode, 
   showTransactionForm, 
-  setShowTransactionForm 
+  setShowTransactionForm,
+  timeRange
 }: FinanceSectionProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [filters, setFilters] = useState<TransactionFilters>({
@@ -72,9 +76,10 @@ export default function FinanceSection({
   const loadTransactions = async () => {
     try {
       setLoading(true);
-      const response = await financeService.getTransactions(filters);
-      setTransactions(response.transactions);
-      setPagination(response.pagination);
+    const response = await financeService.getTransactions(filters);
+    setAllTransactions(response.transactions);
+    setTransactions(response.transactions);
+    setPagination(response.pagination);
     } catch (error: any) {
       console.error("Error loading transactions:", error);
       toast.error("Failed to load transactions");
@@ -115,25 +120,26 @@ export default function FinanceSection({
   // Handle search
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    // For now, we'll filter client-side. In a real app, you'd want server-side search
+    // Filter from allTransactions to maintain the full dataset
     if (term.trim()) {
-      const filtered = transactions.filter(transaction =>
+      const filtered = allTransactions.filter(transaction =>
         transaction.description.toLowerCase().includes(term.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(term.toLowerCase())
+        transaction.category.toLowerCase().includes(term.toLowerCase()) ||
+        transaction.tags.some(tag => tag.toLowerCase().includes(term.toLowerCase()))
       );
       setTransactions(filtered);
     } else {
-      loadTransactions();
+      // If allTransactions is empty, reload from server, otherwise use cached data
+      if (allTransactions.length === 0) {
+        loadTransactions();
+      } else {
+        setTransactions(allTransactions);
+      }
     }
   };
 
-  // Get filtered transactions for display
-  const filteredTransactions = searchTerm.trim()
-    ? transactions.filter(transaction =>
-        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : transactions;
+  // Use transactions directly since search filtering is handled in handleSearch
+  const filteredTransactions = transactions;
 
   // Group transactions by date
   const groupedTransactions = filteredTransactions.reduce((groups, transaction) => {
@@ -169,65 +175,65 @@ export default function FinanceSection({
   const netIncome = totals.income - totals.expense;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col scrollbar-hide">
       {/* Content Area */}
       {viewMode === "dashboard" ? (
-        <div className="flex-1 overflow-y-auto">
-          <FinanceDashboard />
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <FinanceDashboard timeRange={timeRange} />
         </div>
       ) : (
         <>
           {/* Summary Cards */}
-       <div className="grid grid-cols-3 gap-1 mb-4">
-         <div className="border border-gray-200 rounded-lg p-2">
-           <div className="flex items-center gap-1 mb-1">
-             <TrendingUp className="h-3 w-3 text-green-600" />
-             <span className="text-xs text-gray-600">Income</span>
-           </div>
-           <div className="text-sm font-bold text-green-600">
+       <div className="flex gap-1 mb-1 lg:gap-4 lg:mb-6">
+         <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+           <div className="flex items-center gap-2 mb-1 lg:mb-2">
+             <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4 text-green-600" />
+             <span className="text-xs lg:text-sm font-bold text-gray-700">Income</span>
+              </div>
+           <div className="text-sm lg:text-lg font-bold text-green-600">
              {formatCurrency(totals.income)}
-           </div>
-         </div>
+              </div>
+            </div>
 
-         <div className="border border-gray-200 rounded-lg p-2">
-           <div className="flex items-center gap-1 mb-1">
-             <TrendingDown className="h-3 w-3 text-red-600" />
-             <span className="text-xs text-gray-600">Expenses</span>
+         <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+           <div className="flex items-center gap-2 mb-1 lg:mb-2">
+             <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4 text-red-600" />
+             <span className="text-xs lg:text-sm font-bold text-gray-700">Expenses</span>
            </div>
-           <div className="text-sm font-bold text-red-600">
+           <div className="text-sm lg:text-lg font-bold text-red-600">
              {formatCurrency(totals.expense)}
            </div>
-         </div>
+            </div>
 
-         <div className="border border-gray-200 rounded-lg p-2">
-           <div className="flex items-center gap-1 mb-1">
-             <DollarSign className="h-3 w-3 text-blue-600" />
-             <span className="text-xs text-gray-600">Net</span>
+         <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+           <div className="flex items-center gap-2 mb-1 lg:mb-2">
+             <DollarSign className="h-3 w-3 lg:h-4 lg:w-4 text-blue-600" />
+             <span className="text-xs lg:text-sm font-bold text-gray-700">Net</span>
            </div>
-           <div className={`text-sm font-bold ${netIncome >= 0 ? "text-green-600" : "text-red-600"}`}>
+           <div className="text-sm lg:text-lg font-bold text-blue-600">
              {formatCurrency(netIncome)}
            </div>
          </div>
-       </div>
+            </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-2 mb-4">
-        <div className="relative">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4 items-stretch">
+        <div className="relative flex-1">
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3" />
-          <Input
+              <Input
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-7 h-8 text-sm border border-gray-200 shadow-none bg-gray-50 focus:border-gray-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-          />
-        </div>
-        
-        <div className="flex gap-2">
+            className="pl-7 h-10 text-sm border border-gray-200 shadow-none bg-white focus:border-gray-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+            </div>
+
+        <div className="flex gap-2 items-center">
           <Select
             value={filters.type || "all"}
             onValueChange={(value) => handleFilterChange("type", value === "all" ? undefined : value)}
           >
-            <SelectTrigger className="flex-1 h-8 text-sm border border-gray-200 shadow-none bg-gray-50">
+            <SelectTrigger className="w-32 text-sm border border-gray-200 shadow-none bg-white" style={{ height: '40px' }}>
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
@@ -241,7 +247,7 @@ export default function FinanceSection({
             value={filters.category || "all"}
             onValueChange={(value) => handleFilterChange("category", value === "all" ? undefined : value)}
           >
-            <SelectTrigger className="flex-1 h-8 text-sm border border-gray-200 shadow-none bg-gray-50">
+            <SelectTrigger className="w-36 text-sm border border-gray-200 shadow-none bg-white" style={{ height: '40px' }}>
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -258,7 +264,7 @@ export default function FinanceSection({
               ))}
             </SelectContent>
           </Select>
-        </div>
+            </div>
       </div>
 
       {/* Transactions List */}
@@ -270,13 +276,13 @@ export default function FinanceSection({
           </div>
         </div>
       ) : filteredTransactions.length > 0 ? (
-        <div className="flex-1 overflow-y-auto space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 scrollbar-hide">
           {Object.entries(groupedTransactions).map(([date, dateTransactions]) => (
             <div key={date} className="space-y-3">
               {/* Date Header */}
-              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-gray-500" />
-                <h3 className="text-sm font-medium text-gray-700">{date}</h3>
+                <h3 className="text-xs sm:text-sm font-medium text-gray-700">{date}</h3>
                 <div className="flex-1 h-px bg-gray-200"></div>
               </div>
 
@@ -288,7 +294,7 @@ export default function FinanceSection({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className={`p-2 rounded-full ${
-                            transaction.type === "income" 
+                      transaction.type === "income"
                               ? "bg-green-100 text-green-600" 
                               : "bg-red-100 text-red-600"
                           }`}>
@@ -300,40 +306,43 @@ export default function FinanceSection({
                           </div>
                           
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-gray-900 truncate">
-                              {transaction.description}
+                            <h4 className="text-sm sm:text-base font-medium text-gray-900 truncate">
+                      {transaction.description}
                             </h4>
-                            <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1">
                               <Badge variant="secondary" className="text-xs">
                                 {getCategoryLabel(transaction.category, transaction.type)}
                               </Badge>
                               {transaction.tags.length > 0 && (
                                 <div className="flex gap-1">
-                                  {transaction.tags.slice(0, 2).map((tag, index) => (
-                                    <Badge key={index} variant="outline" className="text-xs">
-                                      {tag}
+                                  <Badge variant="outline" className="text-xs hidden sm:inline-flex">
+                                    {transaction.tags[0]}
+                                  </Badge>
+                                  {transaction.tags.length > 1 && (
+                                    <Badge variant="outline" className="text-xs hidden md:inline-flex">
+                                      {transaction.tags[1]}
                                     </Badge>
-                                  ))}
+                                  )}
                                   {transaction.tags.length > 2 && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="text-xs hidden lg:inline-flex">
                                       +{transaction.tags.length - 2}
-                                    </Badge>
+                      </Badge>
                                   )}
                                 </div>
                               )}
-                            </div>
-                          </div>
-                        </div>
+                    </div>
+                  </div>
+                </div>
 
                         <div className="flex items-center gap-2">
                           <div className="text-right">
-                            <div className={`font-semibold ${
+                            <div className={`text-sm sm:text-base font-semibold ${
                               transaction.type === "income" ? "text-green-600" : "text-red-600"
                             }`}>
                               {transaction.type === "income" ? "+" : "-"}{formatCurrency(transaction.amount)}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {new Date(transaction.date).toLocaleTimeString("en-US", {
+                              {new Date(transaction.createdAt).toLocaleTimeString("en-US", {
                                 hour: "2-digit",
                                 minute: "2-digit",
                                 timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -371,9 +380,9 @@ export default function FinanceSection({
                     </CardContent>
                   </Card>
                 ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       ) : (
         <div className="w-full flex-1 min-h-0 grid place-items-center">
