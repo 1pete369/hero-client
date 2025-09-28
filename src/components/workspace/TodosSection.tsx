@@ -178,6 +178,13 @@ export default function TodosSection({
     const scheduledISO = (todo.scheduledDate || '').split('T')[0]
     if (scheduledISO === today) return true
     const rec: any = (todo as any).recurring
+    console.log('Debug occursToday:', {
+      todoTitle: todo.title,
+      scheduledISO,
+      today,
+      recurring: rec,
+      isDaily: rec === 'daily'
+    })
     if (!rec || rec === 'none') return false
     if (rec === 'daily') return true
     if (rec === 'weekly') {
@@ -498,6 +505,15 @@ export default function TodosSection({
     const isToday = occursToday(todo)
     const isPast = todoDateStr < today
     const isFuture = todoDateStr > today
+    
+    console.log('Debug filteredTodos:', {
+      todoTitle: todo.title,
+      todoDateStr,
+      today,
+      isToday,
+      filter,
+      recurring: (todo as any).recurring
+    })
     
     // Extra filters
     const matchesPriority =
