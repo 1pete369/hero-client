@@ -9,6 +9,7 @@ import {
   DragEndEvent,
   DragStartEvent,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   closestCenter,
@@ -253,11 +254,17 @@ export default function TimelineView({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null)
   
-  // Configure sensors for better drag experience
+  // Configure sensors for better drag experience (including touch)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8, // Require 8px of movement before drag starts
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms delay for touch to distinguish from tap
+        tolerance: 8, // 8px tolerance for touch movement
       },
     })
   )

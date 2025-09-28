@@ -184,8 +184,14 @@ export default function WorkspacePage() {
             </div>
 
             {showTimelineModal && (
-              <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-                <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col animate-in slide-in-from-bottom-4 duration-300 ease-out">
+              <div 
+                className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+                onClick={() => setShowTimelineModal(false)}
+              >
+                <div 
+                  className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col animate-in slide-in-from-bottom-4 duration-300 ease-out"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex items-center justify-between p-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900">Timeline</h2>
                     <Button
