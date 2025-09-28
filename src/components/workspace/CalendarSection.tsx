@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react"
+import { Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -12,9 +12,13 @@ import {
 } from "@/components/ui/dialog"
 import { getTodos, type Todo } from "@/services"
 
-export default function CalendarSection() {
+interface CalendarSectionProps {
+  currentDate: Date
+  onDateChange: (date: Date) => void
+}
+
+export default function CalendarSection({ currentDate, onDateChange }: CalendarSectionProps) {
   const [todos, setTodos] = useState<Todo[]>([])
-  const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [showDateModal, setShowDateModal] = useState(false)
@@ -76,18 +80,6 @@ export default function CalendarSection() {
   }
 
 
-  // Calendar navigation
-  const goToPreviousMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
-  }
-
-  const goToNextMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
-  }
-
-  const goToToday = () => {
-    setCurrentDate(new Date())
-  }
 
   // Handle date click to open time block modal
   const handleDateClick = (date: Date) => {
@@ -237,24 +229,6 @@ export default function CalendarSection() {
   return (
     <div className="space-y-4">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </h2>
-          <Button onClick={goToToday} variant="outline" size="sm" className="h-8 px-2 text-[11px] sm:text-xs">
-            Today
-          </Button>
-        </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 mr-1 sm:mr-2">
-          <Button onClick={goToPreviousMonth} variant="outline" size="sm" className="h-8 w-8 p-0">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button onClick={goToNextMonth} variant="outline" size="sm" className="h-8 w-8 p-0">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
 
       {/* Calendar + Side Panel Layout */}
       <div className="grid lg:grid-cols-3 gap-4">

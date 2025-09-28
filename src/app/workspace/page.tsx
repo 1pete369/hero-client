@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { useAuth } from "@/context/useAuthContext"
 import { redirect, useRouter } from "next/navigation"
-import { Menu, List, Clock, CheckCircle, Calendar, ChevronDown, History, Tag, SlidersHorizontal, Briefcase, Heart, BookOpen, ShoppingCart, Wallet, User, Plus } from "lucide-react"
+import { Menu, List, Clock, CheckCircle, Calendar, ChevronDown, History, Tag, SlidersHorizontal, Briefcase, Heart, BookOpen, ShoppingCart, Wallet, User, Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -48,7 +48,21 @@ export default function WorkspacePage() {
   const [showGoalsForm, setShowGoalsForm] = useState(false)
   const [showHabitsForm, setShowHabitsForm] = useState(false)
   const [showTimelineModal, setShowTimelineModal] = useState(false)
+  const [calendarCurrentDate, setCalendarCurrentDate] = useState(new Date())
   const [filter, setFilter] = useState<FilterKey>("all")
+
+  // Calendar navigation functions
+  const goToPreviousMonth = () => {
+    setCalendarCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+  }
+
+  const goToNextMonth = () => {
+    setCalendarCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+  }
+
+  const goToToday = () => {
+    setCalendarCurrentDate(new Date())
+  }
   const [priorityFilter, setPriorityFilter] = useState<"all" | "high" | "medium" | "low">("all")
   const [categoryFilter, setCategoryFilter] = useState<
     | "all"
@@ -185,7 +199,7 @@ export default function WorkspacePage() {
           </div>
         )
       case "calendar":
-        return <CalendarSection />
+        return <CalendarSection currentDate={calendarCurrentDate} onDateChange={setCalendarCurrentDate} />
       case "goals":
         return <GoalsSection showAddForm={showGoalsForm} setShowAddForm={setShowGoalsForm} />
       case "habits":
@@ -481,6 +495,28 @@ export default function WorkspacePage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </>
+                )}
+
+                {/* Calendar Navigation - only show when calendar is active */}
+                {activeSection === "calendar" && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        {calendarCurrentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </h2>
+                      <Button onClick={goToToday} variant="outline" size="sm" className="h-8 px-2 text-xs">
+                        Today
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button onClick={goToPreviousMonth} variant="outline" size="sm" className="h-8 w-8 p-0">
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button onClick={goToNextMonth} variant="outline" size="sm" className="h-8 w-8 p-0">
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 )}
 
                 {/* Desktop Add button (hidden on mobile) */}
