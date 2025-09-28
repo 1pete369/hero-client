@@ -84,8 +84,7 @@ function DraggableTimelineBlock({
         blockColor,
         isDragging ? "cursor-grabbing shadow-lg z-50 opacity-80" : "cursor-grab",
       ].join(" ")}
-      onClick={() => onEditTodo?.(todo)}
-      aria-label={`Open ${todo.title}`}
+      aria-label={`Drag ${todo.title}`}
       {...listeners}
       {...attributes}
     >
