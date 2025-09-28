@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { Clock, Dot, ChevronLeft, ChevronRight } from "lucide-react"
 import type { Todo } from "@/services"
+import { updateTodo } from "@/services"
 
 interface TimelineViewProps {
   todos: Todo[]
@@ -141,6 +142,12 @@ export default function TimelineView({
   const selectedDate = propSelectedDate || getLocalDateString(new Date())
   const [internalSelectedDate, setInternalSelectedDate] = useState(selectedDate)
 
+  // Drag state
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStartY, setDragStartY] = useState(0)
+  const [dragStartTime, setDragStartTime] = useState({ start: '', end: '' })
+  const [draggedTodo, setDraggedTodo] = useState<Todo | null>(null)
+
   // Returns true if a todo occurs on the given YYYY-MM-DD date considering recurrence
   const occursOn = (todo: Todo, dateISO: string) => {
     if (!todo.scheduledDate) return false
@@ -206,6 +213,86 @@ export default function TimelineView({
   const goToToday = () => {
     setInternalSelectedDate(getLocalDateString(new Date()))
   }
+
+  // Drag handlers
+  const minutesToTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
+  }
+
+  const handleMouseDown = useCallback((e: React.MouseEvent, todo: Todo) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    setIsDragging(true)
+    setDragStartY(e.clientY)
+    setDragStartTime({ start: todo.startTime, end: todo.endTime })
+    setDraggedTodo(todo)
+  }, [])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !draggedTodo) return
+
+    const deltaY = e.clientY - dragStartY
+    const deltaMinutes = Math.round(deltaY / MINUTE_TO_PX)
+    
+    const originalStartMinutes = timeToMinutes(dragStartTime.start)
+    const originalEndMinutes = timeToMinutes(dragStartTime.end)
+    const duration = originalEndMinutes - originalStartMinutes
+    
+    const newStartMinutes = Math.max(0, Math.min(1439, originalStartMinutes + deltaMinutes)) // 1439 = 23:59
+    const newEndMinutes = Math.max(0, Math.min(1440, newStartMinutes + duration)) // 1440 = 24:00
+    
+    const newStartTime = minutesToTime(newStartMinutes)
+    const newEndTime = minutesToTime(newEndMinutes)
+    
+    // Update the todo's time temporarily for visual feedback
+    draggedTodo.startTime = newStartTime
+    draggedTodo.endTime = newEndTime
+  }, [isDragging, draggedTodo, dragStartY, dragStartTime])
+
+  const handleMouseUp = useCallback(async () => {
+    if (!isDragging || !draggedTodo) return
+
+    try {
+      // Update the todo in the backend
+      await updateTodo(draggedTodo._id, {
+        startTime: draggedTodo.startTime,
+        endTime: draggedTodo.endTime
+      })
+    } catch (error) {
+      console.error('Failed to update todo time:', error)
+      // Revert the changes on error
+      draggedTodo.startTime = dragStartTime.start
+      draggedTodo.endTime = dragStartTime.end
+    }
+
+    setIsDragging(false)
+    setDraggedTodo(null)
+  }, [isDragging, draggedTodo, dragStartTime])
+
+  // Add global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'grabbing'
+      document.body.style.userSelect = 'none'
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp])
 
   // Auto-scroll to first task or current time
   useEffect(() => {
@@ -340,21 +427,35 @@ export default function TimelineView({
                       "before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 before:rounded-l-md",
                       leftColor,
                       blockColor,
+                      isDragging && draggedTodo?._id === todo._id ? "cursor-grabbing shadow-lg z-50" : "cursor-grab",
                     ].join(" ")}
                     style={{ top, height, width, left }}
-                    onClick={() => onEditTodo?.(todo)}
+                    onMouseDown={(e) => handleMouseDown(e, todo)}
+                    onClick={(e) => {
+                      if (!isDragging) {
+                        onEditTodo?.(todo)
+                      }
+                    }}
                     role="button"
                     aria-label={`Open ${todo.title}`}
                   >
                     <div className="flex h-full flex-col px-2.5 py-1.5">
                       <div className="flex items-center justify-between">
                         <span className="truncate text-[12px] font-semibold text-gray-900">{todo.title}</span>
-                        {live && (
-                          <span className="inline-flex items-center gap-0.5 rounded border border-emerald-200 px-1 py-0.5 text-[10px] text-emerald-700">
-                            <Dot className="h-3 w-3 animate-pulse text-emerald-600" />
-                            Live
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {live && (
+                            <span className="inline-flex items-center gap-0.5 rounded border border-emerald-200 px-1 py-0.5 text-[10px] text-emerald-700">
+                              <Dot className="h-3 w-3 animate-pulse text-emerald-600" />
+                              Live
+                            </span>
+                          )}
+                          {/* Drag indicator */}
+                          <div className="flex flex-col gap-0.5 opacity-30 hover:opacity-60 transition-opacity">
+                            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                          </div>
+                        </div>
                       </div>
                       <div className="mt-0.5 text-[10px] font-mono text-gray-500">
                         {formatTo12Hour(todo.startTime)} – {formatTo12Hour(todo.endTime)} • {duration < 60 ? `${duration}m` : `${Math.floor(duration / 60)}h ${duration % 60}m`}
