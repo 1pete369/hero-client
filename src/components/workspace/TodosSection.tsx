@@ -261,10 +261,8 @@ export default function TodosSection({
       const currentMinutes = now.getHours() * 60 + now.getMinutes()
       
       // Get today's todos to check their start/end times
-      const today = now.toISOString().split('T')[0]
       const todayTodos = todos.filter(todo => {
-        const todoDateStr = new Date(todo.scheduledDate).toISOString().split('T')[0]
-        return todoDateStr === today
+        return occursToday(todo)
       })
       
       // Collect all start and end times for today's todos
@@ -497,16 +495,7 @@ export default function TodosSection({
     const todoDateStr = todo.scheduledDate.split('T')[0]
     
     // Check if todo is scheduled for today or repeats today
-    const baseIsToday = todoDateStr === today
-    let repeatsToday = false
-    if ((todo as any).recurring === 'daily') repeatsToday = true
-    if ((todo as any).recurring === 'weekly') {
-      const dayIdx = new Date().getDay() // 0=Sun
-      const map = ['sun','mon','tue','wed','thu','fri','sat']
-      const daysArr = Array.isArray((todo as any).days) ? (todo as any).days : []
-      repeatsToday = daysArr.includes(map[dayIdx])
-    }
-    const isToday = baseIsToday || repeatsToday
+    const isToday = occursToday(todo)
     const isPast = todoDateStr < today
     const isFuture = todoDateStr > today
     
@@ -621,8 +610,7 @@ export default function TodosSection({
       
       // Filter todos by date categories
       const todayTodos = todos.filter((todo) => {
-        const todoDateStr = todo.scheduledDate.split('T')[0]
-        return todoDateStr === today
+        return occursToday(todo)
       })
       
       const pastTodos = todos.filter((todo) => {
