@@ -178,13 +178,6 @@ export default function TodosSection({
     const scheduledISO = (todo.scheduledDate || '').split('T')[0]
     if (scheduledISO === today) return true
     const rec: any = (todo as any).recurring
-    console.log('Debug occursToday:', {
-      todoTitle: todo.title,
-      scheduledISO,
-      today,
-      recurring: rec,
-      isDaily: rec === 'daily'
-    })
     if (!rec || rec === 'none') return false
     if (rec === 'daily') return true
     if (rec === 'weekly') {
@@ -506,15 +499,6 @@ export default function TodosSection({
     const isPast = todoDateStr < today
     const isFuture = todoDateStr > today
     
-    console.log('Debug filteredTodos:', {
-      todoTitle: todo.title,
-      todoDateStr,
-      today,
-      isToday,
-      filter,
-      recurring: (todo as any).recurring
-    })
-    
     // Extra filters
     const matchesPriority =
       priorityFilter === "all" || todo.priority === priorityFilter
@@ -569,12 +553,19 @@ export default function TodosSection({
     const grouped: { [key: string]: Todo[] } = {}
 
     todos.forEach((todo) => {
-      // Extract date part without timezone conversion
-      const todoDate = todo.scheduledDate.split('T')[0] // Get just YYYY-MM-DD
-      if (!grouped[todoDate]) {
-        grouped[todoDate] = []
+      // For recurring todos that occur today, group them under today's date
+      // For non-recurring todos, use their scheduled date
+      let groupDate: string
+      if (occursToday(todo)) {
+        groupDate = todayStr
+      } else {
+        groupDate = todo.scheduledDate.split('T')[0] // Get just YYYY-MM-DD
       }
-      grouped[todoDate].push(todo)
+      
+      if (!grouped[groupDate]) {
+        grouped[groupDate] = []
+      }
+      grouped[groupDate].push(todo)
     })
 
     // Sort dates in reverse chronological order (newest first)
