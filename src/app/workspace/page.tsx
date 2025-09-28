@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { useAuth } from "@/context/useAuthContext"
 import { redirect, useRouter } from "next/navigation"
+import { getTodos } from "@/services"
 import { Menu, List, Clock, CheckCircle, Calendar, ChevronDown, History, Tag, SlidersHorizontal, Briefcase, Heart, BookOpen, ShoppingCart, Wallet, User, Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -45,6 +46,7 @@ export default function WorkspacePage() {
   const [showFinanceForm, setShowFinanceForm] = useState(false)
   const [financeViewMode, setFinanceViewMode] = useState<"list" | "dashboard">("list")
   const [financeTimeRange, setFinanceTimeRange] = useState("365")
+  const [todosRefreshTrigger, setTodosRefreshTrigger] = useState(0)
   const [showGoalsForm, setShowGoalsForm] = useState(false)
   const [showHabitsForm, setShowHabitsForm] = useState(false)
   const [showTimelineModal, setShowTimelineModal] = useState(false)
@@ -62,6 +64,17 @@ export default function WorkspacePage() {
 
   const goToToday = () => {
     setCalendarCurrentDate(new Date())
+  }
+
+  const reloadTodos = async () => {
+    try {
+      const updatedTodos = await getTodos()
+      setTodos(updatedTodos)
+      // Trigger TodosSection refresh
+      setTodosRefreshTrigger(prev => prev + 1)
+    } catch (error) {
+      console.error('Failed to reload todos:', error)
+    }
   }
   const [priorityFilter, setPriorityFilter] = useState<"all" | "high" | "medium" | "low">("all")
   const [categoryFilter, setCategoryFilter] = useState<
@@ -149,6 +162,7 @@ export default function WorkspacePage() {
                   onCountsUpdate={setTodoCounts}
                   onTodosUpdate={setTodos}
                   onShowTimeline={() => setShowTimelineModal(true)}
+                  refreshTrigger={todosRefreshTrigger}
                 />
               </div>
               <div className="hidden lg:block lg:col-span-1 h-full overflow-hidden">
@@ -164,6 +178,7 @@ export default function WorkspacePage() {
                   onToggleStatus={(todoId, isCompleted) => {
                     console.log('Toggle todo:', todoId, isCompleted)
                   }}
+                  onTodoUpdate={reloadTodos}
                 />
               </div>
             </div>
@@ -190,6 +205,7 @@ export default function WorkspacePage() {
                         console.log('Edit todo:', todo)
                         setShowTimelineModal(false)
                       }}
+                      onTodoUpdate={reloadTodos}
                       showHeader={false}
                     />
                   </div>

@@ -110,6 +110,7 @@ interface TodosSectionProps {
   }) => void
   onTodosUpdate?: (todos: Todo[]) => void
   onShowTimeline?: () => void
+  refreshTrigger?: number
 }
 
 export default function TodosSection({
@@ -121,6 +122,7 @@ export default function TodosSection({
   onCountsUpdate,
   onTodosUpdate,
   onShowTimeline,
+  refreshTrigger,
 }: TodosSectionProps) {
   // Get today's date in local timezone to avoid UTC conversion issues
   const getTodayISO = () => {
@@ -243,6 +245,13 @@ export default function TodosSection({
   useEffect(() => {
     loadTodos()
   }, [])
+
+  // Refresh todos when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger) {
+      loadTodos()
+    }
+  }, [refreshTrigger])
 
   // Update parent component with todos data
   useEffect(() => {

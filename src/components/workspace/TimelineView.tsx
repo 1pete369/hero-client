@@ -4,6 +4,109 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { Clock, Dot, ChevronLeft, ChevronRight } from "lucide-react"
 import type { Todo } from "@/services"
 import { updateTodo } from "@/services"
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
+import { useDraggable } from '@dnd-kit/core'
+
+// Simple Draggable Timeline Block Component
+function DraggableTimelineBlock({ 
+  todo, 
+  top, 
+  height, 
+  width, 
+  left, 
+  start, 
+  end, 
+  duration, 
+  onEditTodo,
+  isToday,
+  currentMinute,
+  COLOR_LEFT,
+  COLOR_BLOCK
+}: {
+  todo: Todo
+  top: number
+  height: number
+  width: string
+  left: string
+  start: number
+  end: number
+  duration: number
+  onEditTodo?: (todo: Todo) => void
+  isToday: boolean
+  currentMinute: () => number
+  COLOR_LEFT: Record<string, string>
+  COLOR_BLOCK: Record<string, string>
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: todo._id,
+  })
+
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    top,
+    height,
+    width,
+    left,
+  }
+
+  const live = isToday && currentMinute() >= start && currentMinute() < end
+  const colorKey = (todo.color ?? "blue") as string
+  const leftColor = COLOR_LEFT[colorKey] ?? COLOR_LEFT.blue
+  const blockColor = COLOR_BLOCK[colorKey] ?? COLOR_BLOCK.blue
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={[
+        "absolute rounded-md border shadow-sm transition",
+        "hover:shadow-md",
+        todo.isCompleted ? "opacity-60" : "",
+        "before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 before:rounded-l-md",
+        leftColor,
+        blockColor,
+        isDragging ? "cursor-grabbing shadow-lg z-50 opacity-80" : "cursor-grab",
+      ].join(" ")}
+      onClick={() => onEditTodo?.(todo)}
+      aria-label={`Open ${todo.title}`}
+      {...listeners}
+      {...attributes}
+    >
+      <div className="flex h-full flex-col px-2.5 py-1.5">
+        <div className="flex items-center justify-between">
+          <span className="truncate text-[12px] font-semibold text-gray-900">{todo.title}</span>
+          <div className="flex items-center gap-1">
+            {live && (
+              <span className="inline-flex items-center gap-0.5 rounded border border-emerald-200 px-1 py-0.5 text-[10px] text-emerald-700">
+                <Dot className="h-3 w-3 animate-pulse text-emerald-600" />
+                Live
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="mt-0.5 text-[10px] font-mono text-gray-500">
+          {formatTo12Hour(todo.startTime)} – {formatTo12Hour(todo.endTime)} • {duration < 60 ? `${duration}m` : `${Math.floor(duration / 60)}h ${duration % 60}m`}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 interface TimelineViewProps {
   todos: Todo[]
@@ -12,6 +115,7 @@ interface TimelineViewProps {
   showHeader?: boolean
   onDeleteTodo?: (todoId: string) => void
   onToggleStatus?: (todoId: string, isCompleted: boolean) => void
+  onTodoUpdate?: () => void
 }
 
 /* ------------ Compact design constants (right panel) ------------ */
@@ -131,6 +235,9 @@ export default function TimelineView({
   selectedDate: propSelectedDate,
   onEditTodo,
   showHeader = true,
+  onDeleteTodo,
+  onToggleStatus,
+  onTodoUpdate,
 }: TimelineViewProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   // Get today's date in local timezone to avoid UTC conversion issues
@@ -142,11 +249,18 @@ export default function TimelineView({
   const selectedDate = propSelectedDate || getLocalDateString(new Date())
   const [internalSelectedDate, setInternalSelectedDate] = useState(selectedDate)
 
-  // Drag state
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStartY, setDragStartY] = useState(0)
-  const [dragStartTime, setDragStartTime] = useState({ start: '', end: '' })
-  const [draggedTodo, setDraggedTodo] = useState<Todo | null>(null)
+  // DndKit drag state
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeTodo, setActiveTodo] = useState<Todo | null>(null)
+  
+  // Configure sensors for better drag experience
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before drag starts
+      },
+    })
+  )
 
   // Returns true if a todo occurs on the given YYYY-MM-DD date considering recurrence
   const occursOn = (todo: Todo, dateISO: string) => {
@@ -214,85 +328,63 @@ export default function TimelineView({
     setInternalSelectedDate(getLocalDateString(new Date()))
   }
 
-  // Drag handlers
+  // DndKit drag handlers
   const minutesToTime = (minutes: number): string => {
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
   }
 
-  const handleMouseDown = useCallback((e: React.MouseEvent, todo: Todo) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event
+    setActiveId(active.id as string)
     
-    setIsDragging(true)
-    setDragStartY(e.clientY)
-    setDragStartTime({ start: todo.startTime, end: todo.endTime })
-    setDraggedTodo(todo)
-  }, [])
+    // Find the todo being dragged
+    const todo = todos.find(t => t._id === active.id)
+    if (todo) {
+      setActiveTodo(todo)
+    }
+  }
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !draggedTodo) return
-
-    const deltaY = e.clientY - dragStartY
-    const deltaMinutes = Math.round(deltaY / MINUTE_TO_PX)
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, delta } = event
     
-    const originalStartMinutes = timeToMinutes(dragStartTime.start)
-    const originalEndMinutes = timeToMinutes(dragStartTime.end)
+    if (!activeTodo || !delta.y) {
+      setActiveId(null)
+      setActiveTodo(null)
+      return
+    }
+
+    // Calculate new time based on drag distance
+    const deltaMinutes = Math.round(delta.y / MINUTE_TO_PX)
+    const originalStartMinutes = timeToMinutes(activeTodo.startTime)
+    const originalEndMinutes = timeToMinutes(activeTodo.endTime)
     const duration = originalEndMinutes - originalStartMinutes
     
-    const newStartMinutes = Math.max(0, Math.min(1439, originalStartMinutes + deltaMinutes)) // 1439 = 23:59
-    const newEndMinutes = Math.max(0, Math.min(1440, newStartMinutes + duration)) // 1440 = 24:00
+    // Round to nearest 5-minute interval
+    const newStartMinutes = Math.max(0, Math.min(1435, Math.round((originalStartMinutes + deltaMinutes) / 5) * 5)) // 1435 = 23:55 (last 5-min slot)
+    const newEndMinutes = Math.max(5, Math.min(1440, newStartMinutes + duration)) // 1440 = 24:00
     
     const newStartTime = minutesToTime(newStartMinutes)
     const newEndTime = minutesToTime(newEndMinutes)
-    
-    // Update the todo's time temporarily for visual feedback
-    draggedTodo.startTime = newStartTime
-    draggedTodo.endTime = newEndTime
-  }, [isDragging, draggedTodo, dragStartY, dragStartTime])
-
-  const handleMouseUp = useCallback(async () => {
-    if (!isDragging || !draggedTodo) return
 
     try {
       // Update the todo in the backend
-      await updateTodo(draggedTodo._id, {
-        startTime: draggedTodo.startTime,
-        endTime: draggedTodo.endTime
+      await updateTodo({
+        _id: activeTodo._id,
+        startTime: newStartTime,
+        endTime: newEndTime
       })
+      
+      // Refresh the todos list to show the updated position
+      onTodoUpdate?.()
     } catch (error) {
       console.error('Failed to update todo time:', error)
-      // Revert the changes on error
-      draggedTodo.startTime = dragStartTime.start
-      draggedTodo.endTime = dragStartTime.end
     }
 
-    setIsDragging(false)
-    setDraggedTodo(null)
-  }, [isDragging, draggedTodo, dragStartTime])
-
-  // Add global mouse event listeners for dragging
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = 'grabbing'
-      document.body.style.userSelect = 'none'
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp])
+    setActiveId(null)
+    setActiveTodo(null)
+  }
 
   // Auto-scroll to first task or current time
   useEffect(() => {
@@ -374,7 +466,13 @@ export default function TimelineView({
 
        {/* Body — fills parent card neatly */}
        <div className="relative flex-1 overflow-hidden">
-         <div ref={scrollRef} className="relative h-full w-full overflow-y-auto scrollbar-hide">
+         <DndContext
+           sensors={sensors}
+           collisionDetection={closestCenter}
+           onDragStart={handleDragStart}
+           onDragEnd={handleDragEnd}
+         >
+           <div ref={scrollRef} className="relative h-full w-full overflow-y-auto scrollbar-hide">
           {/* Full-day canvas */}
           <div className="relative pt-6" style={{ height: 24 * HOUR_HEIGHT }}>
             {/* Hour lines */}
@@ -407,10 +505,6 @@ export default function TimelineView({
               {metas.map(({ todo, top, height, start, end, duration, col, widthCols }) => {
                 const today = getLocalDateString(new Date())
                 const isToday = internalSelectedDate === today
-                const live = isToday && currentMinute() >= start && currentMinute() < end
-                const colorKey = (todo.color ?? "blue") as string
-                const leftColor = COLOR_LEFT[colorKey] ?? COLOR_LEFT.blue
-                const blockColor = COLOR_BLOCK[colorKey] ?? COLOR_BLOCK.blue
 
                 // width/left for columns inside a narrow box (max 3)
                 const totalWidth = `calc(100% - ${(widthCols - 1) * COLUMN_GAP}px)`
@@ -418,57 +512,30 @@ export default function TimelineView({
                 const left = `calc((${width} + ${COLUMN_GAP}px) * ${col})`
 
                 return (
-                  <div
+                  <DraggableTimelineBlock
                     key={todo._id}
-                    className={[
-                      "absolute rounded-md border shadow-sm transition",
-                      "hover:shadow-md",
-                      todo.isCompleted ? "opacity-60" : "",
-                      "before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 before:rounded-l-md",
-                      leftColor,
-                      blockColor,
-                      isDragging && draggedTodo?._id === todo._id ? "cursor-grabbing shadow-lg z-50" : "cursor-grab",
-                    ].join(" ")}
-                    style={{ top, height, width, left }}
-                    onMouseDown={(e) => handleMouseDown(e, todo)}
-                    onClick={(e) => {
-                      if (!isDragging) {
-                        onEditTodo?.(todo)
-                      }
-                    }}
-                    role="button"
-                    aria-label={`Open ${todo.title}`}
-                  >
-                    <div className="flex h-full flex-col px-2.5 py-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="truncate text-[12px] font-semibold text-gray-900">{todo.title}</span>
-                        <div className="flex items-center gap-1">
-                          {live && (
-                            <span className="inline-flex items-center gap-0.5 rounded border border-emerald-200 px-1 py-0.5 text-[10px] text-emerald-700">
-                              <Dot className="h-3 w-3 animate-pulse text-emerald-600" />
-                              Live
-                            </span>
-                          )}
-                          {/* Drag indicator */}
-                          <div className="flex flex-col gap-0.5 opacity-30 hover:opacity-60 transition-opacity">
-                            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-0.5 text-[10px] font-mono text-gray-500">
-                        {formatTo12Hour(todo.startTime)} – {formatTo12Hour(todo.endTime)} • {duration < 60 ? `${duration}m` : `${Math.floor(duration / 60)}h ${duration % 60}m`}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              )}
+                    todo={todo}
+                    top={top}
+                    height={height}
+                    width={width}
+                    left={left}
+                    start={start}
+                    end={end}
+                    duration={duration}
+                    onEditTodo={onEditTodo}
+                    isToday={isToday}
+                    currentMinute={currentMinute}
+                    COLOR_LEFT={COLOR_LEFT}
+                    COLOR_BLOCK={COLOR_BLOCK}
+                  />
+                )
+              })}
             </div>
           </div>
 
 
         </div>
+        </DndContext>
       </div>
     </div>
   )
