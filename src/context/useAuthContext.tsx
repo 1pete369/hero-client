@@ -4,7 +4,7 @@ import { axiosInstance } from "../lib/axiosInstance";
 
 type Signup = { fullName: string; username: string; email: string; password: string };
 type Login = { email: string; password: string };
-type User = { _id: string; fullName: string; username: string; email: string; profilePic?: string } | null;
+type User = { _id: string; fullName: string; username: string; email: string; profilePic?: string; createdAt: string } | null;
 
 type Ctx = {
   authUser: User;

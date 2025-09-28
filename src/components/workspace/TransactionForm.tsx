@@ -113,10 +113,10 @@ export default function TransactionForm({
 
   const handleAddTag = () => {
     const tag = tagInput.trim();
-    if (tag && !formData.tags.includes(tag) && formData.tags.length < 5) {
+    if (tag && formData.tags && !formData.tags.includes(tag) && formData.tags.length < 5) {
       setFormData(prev => ({
         ...prev,
-        tags: [...prev.tags, tag],
+        tags: [...(prev.tags || []), tag],
       }));
       setTagInput("");
     }
@@ -125,7 +125,7 @@ export default function TransactionForm({
   const handleRemoveTag = (tagToRemove: string) => {
     setFormData(prev => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove),
+      tags: (prev.tags || []).filter(tag => tag !== tagToRemove),
     }));
   };
 
@@ -178,7 +178,7 @@ export default function TransactionForm({
         ...formData,
         amount: Number(formData.amount),
         date: formData.date, // Already in YYYY-MM-DD format
-        tags: formData.tags,
+        tags: formData.tags || [],
       };
 
       if (transaction) {
@@ -313,14 +313,14 @@ export default function TransactionForm({
                 variant="outline"
                 size="sm"
                 onClick={handleAddTag}
-                disabled={!tagInput.trim() || formData.tags.length >= 3}
+                disabled={!tagInput.trim() || (formData.tags?.length || 0) >= 3}
               >
                 Add
               </Button>
             </div>
-            {formData.tags.length > 0 && (
+            {(formData.tags?.length || 0) > 0 && (
               <div className="flex flex-wrap gap-1">
-                {formData.tags.map((tag, index) => (
+                {(formData.tags || []).map((tag, index) => (
                   <Badge
                     key={index}
                     variant="secondary"
