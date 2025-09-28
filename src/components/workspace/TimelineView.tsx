@@ -262,8 +262,8 @@ export default function TimelineView({
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200, // 200ms delay for touch to distinguish from tap
-        tolerance: 8, // 8px tolerance for touch movement
+        delay: 0, // No delay for immediate touch response
+        tolerance: 3, // Very small tolerance for immediate drag start
       },
     })
   )
@@ -342,6 +342,7 @@ export default function TimelineView({
   }
 
   const handleDragStart = (event: DragStartEvent) => {
+    console.log('Drag started!', event)
     const { active } = event
     setActiveId(active.id as string)
     
@@ -349,6 +350,7 @@ export default function TimelineView({
     const todo = todos.find(t => t._id === active.id)
     if (todo) {
       setActiveTodo(todo)
+      console.log('Dragging todo:', todo.title)
     }
   }
 
