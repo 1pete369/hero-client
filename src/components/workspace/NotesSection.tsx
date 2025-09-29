@@ -1,100 +1,189 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FileText, Plus, Edit, Trash2, Calendar, Tag, Search } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Search, Pin, Tag, Calendar, Edit, Trash2, Eye, EllipsisVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  category: string
-  tags: string[]
-  linkedGoal?: string
-  linkedHabit?: string
-  createdAt: string
-  updatedAt: string
-}
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { 
+  getNotes, 
+  deleteNote, 
+  togglePinNote, 
+  createNote,
+  updateNote,
+  type Note, 
+  type NoteFilters,
+  getCategoryColor,
+  ALL_CATEGORIES
+} from "@/services/notes.service"
+import { useAuth } from "@/context/useAuthContext"
+import toast from "react-hot-toast"
 
 export default function NotesSection() {
+  const router = useRouter()
+  const { authUser, isCheckingAuth } = useAuth()
+  const [allNotes, setAllNotes] = useState<Note[]>([])
   const [notes, setNotes] = useState<Note[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const [filters, setFilters] = useState<NoteFilters>({
+    category: "all",
+    search: "",
+    isPinned: undefined
+  })
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
   const [formData, setFormData] = useState({
     title: "",
     content: "",
     category: "personal",
-    tags: ""
+    tags: "",
+    isPinned: false,
   })
 
-  // Mock data for now - will be replaced with API calls
-  useEffect(() => {
-    const mockNotes: Note[] = [
-      {
-        id: "1",
-        title: "Productivity System Ideas",
-        content: "Key insights from reading Atomic Habits:\n- Make habits obvious\n- Make them attractive\n- Make them easy\n- Make them satisfying\n\nNeed to implement these in GrindFlow.",
-        category: "learning",
-        tags: ["productivity", "habits", "books"],
-        createdAt: "2024-01-15",
-        updatedAt: "2024-01-18"
-      },
-      {
-        id: "2",
-        title: "Meeting Notes - Team Sync",
-        content: "Discussed Q1 goals:\n- Launch MVP by March\n- Get 100 beta users\n- Improve onboarding flow\n\nNext steps: Design review on Friday",
-        category: "work",
-        tags: ["meeting", "goals", "team"],
-        createdAt: "2024-01-17",
-        updatedAt: "2024-01-17"
-      },
-      {
-        id: "3",
-        title: "Personal Development Plan",
-        content: "2024 Focus Areas:\n1. Technical Skills - React, Node.js\n2. Leadership - Team management\n3. Health - Daily exercise routine\n4. Learning - Read 24 books",
-        category: "personal",
-        tags: ["development", "goals", "planning"],
-        createdAt: "2024-01-01",
-        updatedAt: "2024-01-15"
+  const getPlainText = (html: string) => {
+    try {
+      if (typeof window !== 'undefined') {
+        const div = document.createElement('div')
+        div.innerHTML = html || ''
+        return div.textContent || div.innerText || ''
       }
-    ]
-    setNotes(mockNotes)
-  }, [])
+    } catch {}
+    return (html || '').replace(/<[^>]+>/g, '')
+  }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const tagsArray = formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-    
-    if (editingNote) {
-      // Update existing note
-      setNotes(notes.map(note => 
-        note.id === editingNote.id 
-          ? { 
-              ...note, 
-              ...formData, 
-              tags: tagsArray,
-              updatedAt: new Date().toISOString().split('T')[0]
-            }
-          : note
-      ))
-      setEditingNote(null)
-    } else {
-      // Add new note
-      const newNote: Note = {
-        id: Date.now().toString(),
-        ...formData,
-        tags: tagsArray,
-        createdAt: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0]
+  // Load notes
+  const loadNotes = async () => {
+    try {
+      if (hasLoaded) setIsRefreshing(true); else setLoading(true)
+      console.log('Loading notes with filters:', filters)
+      console.log('Auth user status:', { authUser, isCheckingAuth })
+      
+      // Check if user is authenticated before making the request
+      if (!authUser && !isCheckingAuth) {
+        console.log('User not authenticated, redirecting to login')
+        toast.error('Please log in to view notes')
+        router.push('/login')
+        return
       }
-      setNotes([...notes, newNote])
+      
+      // Fetch once from backend (unfiltered) and filter on client
+      const notesData = await getNotes()
+      console.log('Notes loaded successfully:', notesData)
+      setAllNotes(notesData)
+    } catch (error) {
+      console.error('Failed to load notes:', error)
+      const err = error as any
+      console.error('Error details:', err?.response?.data || err?.message)
+      
+      // Handle specific error types
+      if (typeof err?.message === 'string' && err.message.includes('Authentication required')) {
+        toast.error('Please log in to view notes')
+        router.push('/login')
+      } else if (typeof err?.message === 'string' && err.message.includes('Server error')) {
+        toast.error('Server error. Please try again later.')
+      } else if (typeof err?.message === 'string' && err.message.includes('API endpoint not found')) {
+        toast.error('Backend server is not running. Please check the server status.')
+      } else {
+        const msg = err?.response?.data?.message || err?.message || 'Unknown error'
+        toast.error(`Failed to load notes: ${msg}`)
+      }
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+      setHasLoaded(true)
     }
-    
-    setFormData({ title: "", content: "", category: "personal", tags: "" })
-    setShowAddForm(false)
+  }
+
+  // Fetch only once on page load (when auth ready)
+  useEffect(() => {
+    if (!isCheckingAuth && authUser && !hasLoaded) {
+      loadNotes()
+    }
+    if (!isCheckingAuth && !authUser) {
+      setLoading(false)
+      toast.error('Please log in to view notes')
+    }
+  }, [authUser, isCheckingAuth, hasLoaded])
+
+  // Recompute visible notes when filters or data change
+  useEffect(() => {
+    const applyFilters = () => {
+      let filtered = [...allNotes]
+      if (filters.category && filters.category !== 'all') {
+        filtered = filtered.filter(n => n.category === filters.category)
+      }
+      if (filters.search) {
+        const s = filters.search.toLowerCase()
+        filtered = filtered.filter(n =>
+          (n.title || '').toLowerCase().includes(s) ||
+          (n.content || '').toLowerCase().includes(s) ||
+          (n.tags || []).some(t => t.toLowerCase().includes(s))
+        )
+      }
+      if (filters.isPinned !== undefined) {
+        filtered = filtered.filter(n => !!n.isPinned === !!filters.isPinned)
+      }
+      // Sort: pinned first then newest
+      filtered.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1
+        if (!a.isPinned && b.isPinned) return 1
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      })
+      setNotes(filtered)
+    }
+    applyFilters()
+  }, [filters, allNotes])
+
+  const handleDelete = async (noteId: string) => {
+    if (!confirm('Are you sure you want to delete this note?')) return
+
+    try {
+      await deleteNote(noteId)
+      toast.success('Note deleted successfully')
+      setAllNotes(prev => prev.filter(n => n._id !== noteId))
+    } catch (error) {
+      console.error('Failed to delete note:', error)
+      toast.error('Failed to delete note. Please try again.')
+    }
+  }
+
+  const handleTogglePin = async (noteId: string) => {
+    try {
+      const updated = await togglePinNote(noteId)
+      toast.success('Note pin status updated')
+      setAllNotes(prev => prev.map(n => n._id === noteId ? updated : n))
+    } catch (error) {
+      console.error('Failed to toggle pin:', error)
+      toast.error('Failed to update note. Please try again.')
+    }
+  }
+
+  const handleSearch = (value: string) => {
+    setFilters(prev => ({ ...prev, search: value }))
+  }
+
+  const handleCategoryChange = (value: string) => {
+    setFilters(prev => ({ ...prev, category: value }))
+  }
+
+  const handlePinnedFilter = (value: string) => {
+    const isPinned = value === 'all' ? undefined : value === 'pinned'
+    setFilters(prev => ({ ...prev, isPinned }))
+  }
+
+  const resetForm = () => {
+    setEditingNote(null)
+    setFormData({ title: "", content: "", category: "personal", tags: "", isPinned: false })
   }
 
   const handleEdit = (note: Note) => {
@@ -103,92 +192,115 @@ export default function NotesSection() {
       title: note.title,
       content: note.content,
       category: note.category,
-      tags: note.tags.join(', ')
+      tags: (note.tags || []).join(', '),
+      isPinned: !!note.isPinned,
     })
     setShowAddForm(true)
   }
 
-  const handleDelete = (noteId: string) => {
-    setNotes(notes.filter(note => note.id !== noteId))
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.title.trim() || !formData.content.trim()) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    try {
+      const tagsArray = formData.tags
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean)
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "work": return "bg-blue-100 text-blue-800"
-      case "personal": return "bg-purple-100 text-purple-800"
-      case "learning": return "bg-green-100 text-green-800"
-      case "ideas": return "bg-yellow-100 text-yellow-800"
-      default: return "bg-gray-100 text-gray-800"
+      if (editingNote) {
+        const updated = await updateNote({
+          _id: editingNote._id,
+          title: formData.title,
+          content: formData.content,
+          category: formData.category as any,
+          tags: tagsArray,
+          isPinned: formData.isPinned,
+        })
+        toast.success('Note updated')
+        setAllNotes(prev => prev.map(n => n._id === editingNote._id ? updated : n))
+      } else {
+        const created = await createNote({
+          title: formData.title,
+          content: formData.content,
+          category: formData.category as any,
+          tags: tagsArray,
+          isPinned: formData.isPinned,
+        })
+        toast.success('Note created')
+        setAllNotes(prev => [created, ...prev])
+      }
+      resetForm()
+      setShowAddForm(false)
+    } catch (error) {
+      console.error('Failed to save note:', error)
+      toast.error('Failed to save note. Please try again.')
     }
   }
 
-  const filteredNotes = notes.filter(note => {
-    const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         note.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    
-    const matchesCategory = selectedCategory === "all" || note.category === selectedCategory
-    
-    return matchesSearch && matchesCategory
-  })
-
-  const categories = ["all", "work", "personal", "learning", "ideas"]
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading notes...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <FileText className="h-8 w-8 text-purple-600" />
-            Notes
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Capture ideas, insights, and important information
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowAddForm(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Note
-        </Button>
-      </div>
-
-      {/* Search and Filters */}
+      {/* Controls (no header) */}
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Search */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <input
+          <Input
             type="text"
             placeholder="Search notes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            value={filters.search || ''}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-10"
           />
         </div>
         
         {/* Category Filter */}
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-        >
-          {categories.map(category => (
-            <option key={category} value={category}>
-              {category === "all" ? "All Categories" : category.charAt(0).toUpperCase() + category.slice(1)}
-            </option>
-          ))}
-        </select>
+        <Select value={filters.category || 'all'} onValueChange={handleCategoryChange}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            {ALL_CATEGORIES.map(category => (
+              <SelectItem key={category.value} value={category.value}>
+                {category.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Pinned Filter */}
+        <Select value={filters.isPinned === undefined ? 'all' : filters.isPinned ? 'pinned' : 'unpinned'} onValueChange={handlePinnedFilter}>
+          <SelectTrigger className="w-full sm:w-32">
+            <SelectValue placeholder="Filter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="pinned">Pinned</SelectItem>
+            <SelectItem value="unpinned">Unpinned</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Global header has the Add button; local New Note button removed */}
       </div>
 
-      {/* Add/Edit Form */}
+      {/* Inline Create / Edit Form */}
       {showAddForm && (
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <h3 className="text-lg font-semibold mb-4">
-            {editingNote ? "Edit Note" : "Add New Note"}
+            {editingNote ? 'Edit Note' : 'Add New Note'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -196,11 +308,9 @@ export default function NotesSection() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Note Title
                 </label>
-                <input
-                  type="text"
+                <Input
                   value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Enter note title"
                   required
                 />
@@ -209,16 +319,20 @@ export default function NotesSection() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category
                 </label>
-                <select
+                <Select
                   value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onValueChange={(value: any) => setFormData({ ...formData, category: value })}
                 >
-                  <option value="personal">Personal</option>
-                  <option value="work">Work</option>
-                  <option value="learning">Learning</option>
-                  <option value="ideas">Ideas</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="work">Work</SelectItem>
+                    <SelectItem value="learning">Learning</SelectItem>
+                    <SelectItem value="ideas">Ideas</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>
@@ -227,7 +341,7 @@ export default function NotesSection() {
               </label>
               <textarea
                 value={formData.content}
-                onChange={(e) => setFormData({...formData, content: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 rows={6}
                 placeholder="Write your note content here..."
@@ -238,26 +352,32 @@ export default function NotesSection() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Tags (comma-separated)
               </label>
-              <input
-                type="text"
+              <Input
                 value={formData.tags}
-                onChange={(e) => setFormData({...formData, tags: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                 placeholder="productivity, habits, goals"
               />
             </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isPinned"
+                checked={formData.isPinned}
+                onChange={(e) => setFormData({ ...formData, isPinned: e.target.checked })}
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isPinned" className="text-sm font-medium text-gray-700">
+                Pin this note to the top
+              </label>
+            </div>
             <div className="flex gap-3">
               <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
-                {editingNote ? "Update Note" : "Add Note"}
+                {editingNote ? 'Update Note' : 'Add Note'}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setShowAddForm(false)
-                  setEditingNote(null)
-                  setFormData({ title: "", content: "", category: "personal", tags: "" })
-                }}
+                onClick={() => { resetForm(); setShowAddForm(false) }}
               >
                 Cancel
               </Button>
@@ -267,46 +387,54 @@ export default function NotesSection() {
       )}
 
       {/* Notes Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredNotes.map((note) => (
-          <div key={note.id} className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+        {notes.map((note) => (
+          <div key={note._id} className="group relative bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-gray-200 transition-all">
+            {note.isPinned && (
+              <span className="absolute left-0 top-0 h-full w-[3px] rounded-l-xl bg-purple-600" />
+            )}
             {/* Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{note.title}</h3>
-                <div className="text-sm text-gray-600 mb-3 line-clamp-3">
-                  {note.content}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold tracking-tight text-gray-900 mb-1 line-clamp-1 truncate">{note.title}</h3>
+                <div className="text-sm text-gray-600 mb-2 line-clamp-2">
+                  {getPlainText(note.content)}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1 ml-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleEdit(note)}
+                  onClick={() => handleTogglePin(note._id)}
                   className="p-1 hover:bg-gray-100"
                 >
-                  <Edit className="h-4 w-4 text-gray-600" />
+                  <Pin className={`h-4 w-4 ${note.isPinned ? 'fill-current text-purple-600' : 'text-gray-600'}`} />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(note.id)}
-                  className="p-1 hover:bg-gray-100 text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100">
+                      <EllipsisVertical className="h-4 w-4 text-gray-600" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={4} className="w-32 p-1 text-xs">
+                    <DropdownMenuItem onClick={() => handleEdit(note)} className="flex items-center gap-2 py-1.5">
+                      <Edit className="h-3 w-3" />
+                      <span>Edit</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDelete(note._id)} className="flex items-center gap-2 py-1.5 text-red-600 focus:text-red-700">
+                      <Trash2 className="h-3 w-3" />
+                      <span>Delete</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
             {/* Tags */}
-            {note.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
+            {note.tags && note.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
                 {note.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full flex items-center gap-1"
-                  >
-                    <Tag className="h-3 w-3" />
+                  <span key={index} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px]">
                     {tag}
                   </span>
                 ))}
@@ -314,54 +442,49 @@ export default function NotesSection() {
             )}
 
             {/* Meta Info */}
-            <div className="space-y-2 text-sm text-gray-600 mb-4">
+            <div className="flex items-center justify-between text-xs text-gray-600 mt-2">
               <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(note.category)}`}>
+                <Badge className={getCategoryColor(note.category)}>
                   {note.category.charAt(0).toUpperCase() + note.category.slice(1)}
-                </span>
+                </Badge>
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span>Created: {new Date(note.createdAt).toLocaleDateString()}</span>
+              <div className="flex items-center gap-1 text-gray-500">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>{new Date(note.createdAt).toLocaleDateString()}</span>
               </div>
-              {note.updatedAt !== note.createdAt && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Updated: {new Date(note.updatedAt).toLocaleDateString()}</span>
-                </div>
-              )}
             </div>
 
             {/* View Full Note Button */}
-            <Button
-              variant="outline"
-              className="w-full text-purple-600 border-purple-600 hover:bg-purple-50"
-              onClick={() => {
-                // In a real app, this would open a modal or navigate to a full note view
-                alert(`Full note content:\n\n${note.content}`)
-              }}
-            >
-              View Full Note
-            </Button>
+            <div className="mt-3">
+              <Button
+                variant="ghost"
+                className="w-full justify-center text-purple-600 hover:bg-purple-50"
+                onClick={() => router.push(`/workspace?section=notes&noteAction=view&noteId=${note._id}`)}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                View Full Note
+              </Button>
+            </div>
           </div>
         ))}
       </div>
 
       {/* Empty State */}
-      {filteredNotes.length === 0 && !showAddForm && (
-        <div className="text-center flex-1 min-h-0 grid place-items-center">
-          <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No notes found</h3>
-          <p className="text-gray-600">
-            {searchTerm || selectedCategory !== "all"
-              ? "Try adjusting your search or filters"
-              : "Start by creating your first note to capture your ideas"
-            }
-          </p>
+      {notes.length === 0 && (
+        <div className="py-24">
+          <div className="flex items-center justify-center">
+            <div className="text-center max-w-md">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No notes found</h3>
+              <p className="text-gray-600">
+                {filters.search || filters.category !== "all" || filters.isPinned !== undefined
+                  ? "Try adjusting your search or filters"
+                  : "You don't have any notes yet"
+                }
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
   )
 }
-
-

@@ -7,7 +7,14 @@ const normalizeApiBase = (raw: string) => {
 };
 
 const getMainApiBaseURL = () => {
-  // 1) Prefer same-origin in local dev to avoid CORS and SW issues
+  // 1) Respect explicit env when provided (e.g., production)
+  const rawFromEnv = process.env.NEXT_PUBLIC_MAIN_API_URL;
+  if (rawFromEnv && rawFromEnv.trim()) {
+    console.log('Using env API URL:', rawFromEnv);
+    return normalizeApiBase(rawFromEnv);
+  }
+
+  // 2) For local development, use same-origin to leverage Next.js proxy
   if (typeof window !== "undefined") {
     const host = window.location.hostname;
     const isLocal =
@@ -15,17 +22,14 @@ const getMainApiBaseURL = () => {
       host === "127.0.0.1" ||
       /^192\.168\./.test(host) ||
       /^10\./.test(host);
-    if (isLocal) return "/api";
-  }
-
-  // 2) Respect explicit env when not local (e.g., production)
-  const rawFromEnv = process.env.NEXT_PUBLIC_MAIN_API_URL;
-  if (rawFromEnv && rawFromEnv.trim()) {
-    return normalizeApiBase(rawFromEnv);
-    
+    if (isLocal) {
+      console.log('Using local proxy: /api');
+      return "/api";
+    }
   }
 
   // 3) Final default
+  console.log('Using default: /api');
   return "/api";
 };
 

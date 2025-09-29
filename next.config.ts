@@ -12,6 +12,13 @@ const nextConfig = {
       ? `${normalizedBase}/api/:path*`
       : "http://localhost:5001/api/:path*";
 
+    console.log('Next.js proxy config:', {
+      envBase,
+      normalizedBase,
+      destination,
+      hasEnv: !!envBase
+    });
+
     return [
       {
         source: "/api/:path*",

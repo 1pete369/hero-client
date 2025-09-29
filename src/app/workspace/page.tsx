@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, Suspense } from "react"
 import { useAuth } from "@/context/useAuthContext"
-import { redirect, useRouter } from "next/navigation"
+import { redirect, useRouter, useSearchParams } from "next/navigation"
 import { getTodos } from "@/services"
 import { Menu, List, Clock, CheckCircle, Calendar, ChevronDown, History, Tag, SlidersHorizontal, Briefcase, Heart, BookOpen, ShoppingCart, Wallet, User, Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -31,13 +31,16 @@ import NotesSection from "@/components/workspace/NotesSection"
 import JournalsSection from "@/components/workspace/JournalsSection"
 import FinanceSection from "@/components/workspace/FinanceSection"
 import TimelineView from "@/components/workspace/TimelineView"
+import NewNotePage from "@/components/workspace/NewNotePage"
+import EditNotePage from "@/components/workspace/EditNotePage"
+import ViewNotePage from "@/components/workspace/ViewNotePage"
 
 type FilterKey = "all" | "pending" | "completed" | "upcoming" | "past"
 
-export default function WorkspacePage() {
+function WorkspaceContent() {
   const { authUser, isCheckingAuth } = useAuth()
-  // We'll parse query params client-side to avoid Suspense requirement
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [activeSection, setActiveSection] = useState("todos")
   const [isLoading, setIsLoading] = useState(true)
@@ -52,6 +55,13 @@ export default function WorkspacePage() {
   const [showTimelineModal, setShowTimelineModal] = useState(false)
   const [calendarCurrentDate, setCalendarCurrentDate] = useState(new Date())
   const [filter, setFilter] = useState<FilterKey>("all")
+
+  // Check if we're on a note page
+  const noteAction = searchParams.get('noteAction')
+  const noteId = searchParams.get('noteId')
+  const isNewNotePage = noteAction === 'new'
+  const isEditNotePage = noteAction === 'edit' && noteId
+  const isViewNotePage = noteAction === 'view' && noteId
 
   // Calendar navigation functions
   const goToPreviousMonth = () => {
@@ -232,7 +242,15 @@ export default function WorkspacePage() {
       case "habits":
         return <HabitsSection showAddForm={showHabitsForm} setShowAddForm={setShowHabitsForm} />
       case "notes":
-        return <NotesSection />
+        if (isNewNotePage) {
+          return <NewNotePage />
+        } else if (isEditNotePage) {
+          return <EditNotePage />
+        } else if (isViewNotePage) {
+          return <ViewNotePage />
+        } else {
+          return <NotesSection />
+        }
       case "journals":
         return <JournalsSection />
       case "finance":
@@ -278,11 +296,14 @@ export default function WorkspacePage() {
               <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0">
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">
-                    {activeSection === "finance" ? "Finance" : `Good ${greeting}!`}
+                    {activeSection === "finance" ? "Finance" : 
+                     activeSection === "notes" ? "Notes" : `Good ${greeting}!`}
                   </h1>
                   <p className="text-gray-600 text-xs truncate">
                     {activeSection === "finance" 
                       ? "Track your income and expenses" 
+                      : activeSection === "notes"
+                      ? "Capture ideas, insights, and important information"
                       : "Manage your daily tasks and priorities"
                     }
                   </p>
@@ -554,6 +575,7 @@ export default function WorkspacePage() {
                       else if (activeSection === "finance") setShowFinanceForm(true)
                       else if (activeSection === "goals") setShowGoalsForm(true)
                       else if (activeSection === "habits") setShowHabitsForm(true)
+                      else if (activeSection === "notes") router.push("/workspace?section=notes&noteAction=new")
                     }}
                     className="hidden lg:inline-flex bg-indigo-600 hover:bg-indigo-700 text-white"
                     size="sm"
@@ -579,6 +601,7 @@ export default function WorkspacePage() {
             } else if (activeSection === "finance") setShowFinanceForm(true)
             else if (activeSection === "goals") setShowGoalsForm(true)
             else if (activeSection === "habits") setShowHabitsForm(true)
+            else if (activeSection === "notes") router.push("/workspace?section=notes&noteAction=new")
           }}
           aria-label={`Add ${activeSection}`}
           className="lg:hidden fixed bottom-5 right-5 z-50 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-14 h-14 flex items-center justify-center"
@@ -587,6 +610,21 @@ export default function WorkspacePage() {
         </button>
       )}
     </div>
+  )
+}
+
+export default function WorkspacePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading workspace...</p>
+        </div>
+      </div>
+    }>
+      <WorkspaceContent />
+    </Suspense>
   )
 }
 
