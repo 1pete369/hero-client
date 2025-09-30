@@ -253,48 +253,7 @@ export default function NotesSection() {
 
   return (
     <div className="space-y-6">
-      {/* Controls (no header) */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            type="text"
-            placeholder="Search notes..."
-            value={filters.search || ''}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        {/* Category Filter */}
-        <Select value={filters.category || 'all'} onValueChange={handleCategoryChange}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            {ALL_CATEGORIES.map(category => (
-              <SelectItem key={category.value} value={category.value}>
-                {category.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Pinned Filter */}
-        <Select value={filters.isPinned === undefined ? 'all' : filters.isPinned ? 'pinned' : 'unpinned'} onValueChange={handlePinnedFilter}>
-          <SelectTrigger className="w-full sm:w-32">
-            <SelectValue placeholder="Filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="pinned">Pinned</SelectItem>
-            <SelectItem value="unpinned">Unpinned</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Global header has the Add button; local New Note button removed */}
-      </div>
+      {/* Controls removed per request */}
 
       {/* Inline Create / Edit Form */}
       {showAddForm && (
@@ -389,7 +348,19 @@ export default function NotesSection() {
       {/* Notes Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
         {notes.map((note) => (
-          <div key={note._id} className="group relative bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-gray-200 transition-all">
+          <div
+            key={note._id}
+            className="group relative bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-gray-200 transition-all cursor-pointer hover:shadow-sm"
+            onClick={() => router.push(`/workspace?section=notes&noteAction=view&noteId=${note._id}`)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                router.push(`/workspace?section=notes&noteAction=view&noteId=${note._id}`)
+              }
+            }}
+          >
             {note.isPinned && (
               <span className="absolute left-0 top-0 h-full w-[3px] rounded-l-xl bg-purple-600" />
             )}
@@ -402,26 +373,28 @@ export default function NotesSection() {
                 </div>
               </div>
               <div className="flex gap-1 ml-2">
-                <Button
+                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleTogglePin(note._id)}
-                  className="p-1 hover:bg-gray-100"
+                   className="p-1 hover:bg-gray-100"
+                   onMouseDown={(e) => e.stopPropagation()}
+                   onClickCapture={(e) => e.stopPropagation()}
                 >
                   <Pin className={`h-4 w-4 ${note.isPinned ? 'fill-current text-purple-600' : 'text-gray-600'}`} />
                 </Button>
-                <DropdownMenu>
+                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100">
+                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100" onMouseDown={(e) => e.stopPropagation()} onClickCapture={(e) => e.stopPropagation()}>
                       <EllipsisVertical className="h-4 w-4 text-gray-600" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" sideOffset={4} className="w-32 p-1 text-xs">
-                    <DropdownMenuItem onClick={() => handleEdit(note)} className="flex items-center gap-2 py-1.5">
+                     <DropdownMenuItem onClick={() => handleEdit(note)} className="flex items-center gap-2 py-1.5">
                       <Edit className="h-3 w-3" />
                       <span>Edit</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDelete(note._id)} className="flex items-center gap-2 py-1.5 text-red-600 focus:text-red-700">
+                     <DropdownMenuItem onClick={() => handleDelete(note._id)} className="flex items-center gap-2 py-1.5 text-red-600 focus:text-red-700">
                       <Trash2 className="h-3 w-3" />
                       <span>Delete</span>
                     </DropdownMenuItem>
@@ -454,17 +427,7 @@ export default function NotesSection() {
               </div>
             </div>
 
-            {/* View Full Note Button */}
-            <div className="mt-3">
-              <Button
-                variant="ghost"
-                className="w-full justify-center text-purple-600 hover:bg-purple-50"
-                onClick={() => router.push(`/workspace?section=notes&noteAction=view&noteId=${note._id}`)}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                View Full Note
-              </Button>
-            </div>
+             {/* Card is clickable; remove explicit view button */}
           </div>
         ))}
       </div>

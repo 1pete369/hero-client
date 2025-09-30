@@ -110,62 +110,37 @@ export default function ViewNotePage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      {/* Actions (no back button or header) */}
-      <div className="flex items-center justify-between mb-6">
-        <div />
-
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleTogglePin}
-            disabled={isTogglingPin}
-            className="flex items-center gap-2"
-          >
-            <Pin className={`h-4 w-4 ${note.isPinned ? 'fill-current' : ''}`} />
-            {isTogglingPin ? "Updating..." : note.isPinned ? "Unpin" : "Pin"}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleEdit}
-            className="flex items-center gap-2"
-          >
-            <Edit className="h-4 w-4" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4" />
-            {isDeleting ? "Deleting..." : "Delete"}
-          </Button>
-        </div>
-      </div>
 
       {/* Note Content */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         {/* Meta Information */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+          <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(note.category)}`}>
                 {note.category.charAt(0).toUpperCase() + note.category.slice(1)}
               </span>
             </div>
             
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <span>Created: {new Date(note.createdAt).toLocaleDateString()}</span>
-            </div>
-            
-            {note.updatedAt !== note.createdAt && (
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>Updated: {new Date(note.updatedAt).toLocaleDateString()}</span>
+                <span>{new Date(note.createdAt).toLocaleDateString()}</span>
               </div>
-            )}
+              {/* Updated date intentionally not shown */}
+              {/* Inline actions next to dates */}
+              <div className="hidden sm:flex items-center gap-2 ml-2">
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-700" onClick={handleTogglePin}>
+                  <Pin className={`h-4 w-4 ${note.isPinned ? 'fill-current text-purple-600' : ''}`} />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-700" onClick={handleEdit}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-red-600" onClick={handleDelete} disabled={isDeleting}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
 
             {note.isPinned && (
               <div className="flex items-center gap-2 text-purple-600">

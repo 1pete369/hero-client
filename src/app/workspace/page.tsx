@@ -28,7 +28,7 @@ import CalendarSection from "@/components/workspace/CalendarSection"
 import GoalsSection from "@/components/workspace/GoalsSection"
 import HabitsSection from "@/components/workspace/HabitsSection"
 import NotesSection from "@/components/workspace/NotesSection"
-import JournalsSection from "@/components/workspace/JournalsSection"
+// Journals feature removed
 import FinanceSection from "@/components/workspace/FinanceSection"
 import TimelineView from "@/components/workspace/TimelineView"
 import NewNotePage from "@/components/workspace/NewNotePage"
@@ -251,8 +251,8 @@ function WorkspaceContent() {
         } else {
           return <NotesSection />
         }
-      case "journals":
-        return <JournalsSection />
+      // case "journals":
+      //   return <JournalsSection />
       case "finance":
         return (
           <FinanceSection 

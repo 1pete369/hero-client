@@ -28,7 +28,7 @@ export default function Navbar() {
           <div className="w-10 h-10 bg-indigo-700 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-lg">GF</span>
           </div>
-          <span className="text-gray-900 font-bold text-xl">GrindFlow</span>
+          <span className="text-gray-900 font-bold text-xl">GrindFlowClub</span>
         </div>
         <Link href={"/"}>
           <Button className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-full px-4 py-2">

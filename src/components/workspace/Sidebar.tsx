@@ -53,7 +53,6 @@ export default function Sidebar({
     { id: "habits", title: "Habits", icon: "🔄", description: "Build and maintain positive routines" },
     { id: "finance", title: "Finance", icon: "💰", description: "Track income, expenses, and financial goals" },
     { id: "notes", title: "Notes", icon: "📔", description: "Capture ideas and important information" },
-    { id: "journals", title: "Journals", icon: "📖", description: "Reflect on your daily experiences" },
   ]
 
   return (

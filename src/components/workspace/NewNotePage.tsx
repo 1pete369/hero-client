@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Save, X } from "lucide-react"
+import { Save, X, Pin, PinOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -43,92 +43,80 @@ export default function NewNotePage() {
     }
   }
 
-  const handleTagsChange = (value: string) => {
-    const tags = value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-    setFormData({ ...formData, tags })
-  }
+  // Tags feature removed from form UI
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto">
       {/* No header/back button */}
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          {/* Title */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Note Title *
-            </label>
-            <Input
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Enter note title"
-              className="text-lg"
-              required
-            />
-          </div>
-
-          {/* Category and Tags */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <Select
-                value={formData.category}
-                onValueChange={(value: any) => setFormData({ ...formData, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="personal">Personal</SelectItem>
-                  <SelectItem value="work">Work</SelectItem>
-                  <SelectItem value="learning">Learning</SelectItem>
-                  <SelectItem value="ideas">Ideas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tags (comma-separated)
+        <div className="bg-white p-0 rounded-lg border border-gray-200">
+          <div className="p-4 md:p-6">
+          {/* Title + Category + Pin (inline) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 items-end gap-4 mb-6">
+            <div className="md:col-span-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">
+                Note Title *
               </label>
               <Input
-                value={(formData.tags ?? []).join(', ')}
-                onChange={(e) => handleTagsChange(e.target.value)}
-                placeholder="productivity, habits, goals"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter note title"
+                className="h-10 text-sm md:text-base"
+                required
               />
+            </div>
+            <div className="flex items-end gap-3 justify-start md:justify-end">
+              <div className="min-w-[160px]">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value: any) => setFormData({ ...formData, category: value })}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="work">Work</SelectItem>
+                    <SelectItem value="learning">Learning</SelectItem>
+                    <SelectItem value="ideas">Ideas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant={formData.isPinned ? "default" : "outline"}
+                onClick={() => setFormData({ ...formData, isPinned: !formData.isPinned })}
+                className={`h-10 inline-flex items-center gap-2 ${formData.isPinned ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "text-gray-700"}`}
+                aria-pressed={formData.isPinned}
+                aria-label={formData.isPinned ? "Unpin note" : "Pin note"}
+              >
+                {formData.isPinned ? <Pin className="h-4 w-4 fill-current" /> : <PinOff className="h-4 w-4" />}
+                <span className="hidden sm:inline">{formData.isPinned ? "Pinned" : "Pin"}</span>
+              </Button>
             </div>
           </div>
 
           {/* Content */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">
               Content *
             </label>
             <Textarea
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               placeholder="Write your note content here..."
-              rows={12}
-              className="resize-none scrollbar-hide"
+              rows={14}
+              className="resize-none scrollbar-hide text-xs md:text-sm min-h-[220px] md:min-h-[340px] lg:min-h-[400px]"
               required
             />
           </div>
 
-          {/* Pin Option */}
-          <div className="flex items-center gap-2 mb-6">
-            <Checkbox
-              id="isPinned"
-              checked={formData.isPinned}
-              onCheckedChange={(val) => setFormData({ ...formData, isPinned: Boolean(val) })}
-            />
-            <label htmlFor="isPinned" className="text-sm font-medium text-gray-700">
-              Pin this note to the top
-            </label>
-          </div>
+          
           {/* Actions (inside the form card) */}
           <div className="flex gap-3">
             <Button
@@ -148,6 +136,7 @@ export default function NewNotePage() {
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
+          </div>
           </div>
         </div>
       </form>
