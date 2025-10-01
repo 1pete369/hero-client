@@ -13,13 +13,24 @@ import { useAuth } from "@/context/useAuthContext"
 import { ArrowLeft, Menu, PowerOff, XIcon, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export default function Navbar() {
   const { authUser, logout } = useAuth()
-
+  const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
 
-  if (pathname.startsWith("/chat") || pathname.startsWith("/workspace")) return <></>
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return null
+  }
+
+  if (pathname.startsWith("/chat") || pathname.startsWith("/workspace")) {
+    return null
+  }
 
   if (["/login", "/signup"].some((route) => pathname.startsWith(route))) {
     return (
