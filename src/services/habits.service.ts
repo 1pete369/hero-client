@@ -7,6 +7,7 @@ export interface Habit {
   frequency: 'daily' | 'weekly' | 'monthly'
   days: string[]
   startDate: string
+  endDate?: string | null
   completedDates: string[]
   streak: number
   longestStreak: number
@@ -15,6 +16,7 @@ export interface Habit {
   icon: string
   category: string
   isArchived: boolean
+  status?: 'active' | 'completed' | 'cancelled'
   createdAt: string
   updatedAt: string
 }

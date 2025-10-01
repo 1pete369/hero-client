@@ -354,10 +354,18 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="text-base font-semibold text-gray-900 mb-1.5">
+                  <h3 className={`text-base font-semibold mb-1.5 ${
+                    goal.status === "completed" && goal.targetDate && new Date(goal.targetDate) < new Date() 
+                      ? "text-gray-500 line-through" 
+                      : "text-gray-900"
+                  }`}>
                     {goal.title}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-2 line-clamp-2 overflow-hidden text-ellipsis h-10">
+                  <p className={`text-sm mb-2 line-clamp-2 overflow-hidden text-ellipsis h-10 ${
+                    goal.status === "completed" && goal.targetDate && new Date(goal.targetDate) < new Date() 
+                      ? "text-gray-400" 
+                      : "text-gray-600"
+                  }`}>
                     {goal.description}
                   </p>
                 </div>
@@ -373,9 +381,13 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(goal)}>
+                      <DropdownMenuItem 
+                        onClick={() => handleEdit(goal)}
+                        disabled={goal.status === "completed" && !!goal.targetDate && new Date(goal.targetDate) < new Date()}
+                        className={goal.status === "completed" && goal.targetDate && new Date(goal.targetDate) < new Date() ? "opacity-50 cursor-not-allowed" : ""}
+                      >
                         <Edit className="mr-2 h-4 w-4" />
-                        Edit
+                        {goal.status === "completed" && goal.targetDate && new Date(goal.targetDate) < new Date() ? "Edit (Expired)" : "Edit"}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDelete(goal._id)}

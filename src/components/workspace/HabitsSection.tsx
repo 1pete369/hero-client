@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { TrendingUp, Plus, Edit, Trash2, Crown, Check, Link } from "lucide-react"
+import { ArrowPathIcon, CalendarIcon } from "@heroicons/react/24/outline"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -27,6 +28,7 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [openFreqTips, setOpenFreqTips] = useState<Record<string, boolean>>({})
   const [formData, setFormData] = useState<CreateHabitData>({
     title: "",
     frequency: "daily",
@@ -172,6 +174,10 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
     })
     setShowAddForm(false)
     setEditingHabit(null)
+  }
+
+  const toggleFreqTooltip = (habitId: string) => {
+    setOpenFreqTips((prev) => ({ ...prev, [habitId]: !prev[habitId] }))
   }
 
   const getCategoryColor = (category: string) => {
@@ -327,17 +333,20 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Button
                   onClick={() => toggleTodayCompletion(habit._id)}
+                  disabled={habit.status === "completed"}
                   className={`h-8 w-8 rounded-full border-1 border-green-500 p-0 shrink-0 ${
-                    isCompletedToday(habit)
-                      ? "bg-green-500 text-white hover:bg-green-600 hover:text-white"
-                      : "bg-white hover:bg-green-50 text-gray-600 hover:text-gray-700"
+                    habit.status === "completed"
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : isCompletedToday(habit)
+                        ? "bg-green-500 text-white hover:bg-green-600 hover:text-white"
+                        : "bg-white hover:bg-green-50 text-gray-600 hover:text-gray-700"
                   }`}
                 >
                   {isCompletedToday(habit) && <Check className="h-4 w-4" />}
                 </Button>
                 <div className="flex flex-col justify-between gap-1 flex-1 min-w-0">
                   <h3 className={`text-sm font-semibold truncate ${
-                    isCompletedToday(habit)
+                    isCompletedToday(habit) || (habit.status === "completed" && habit.endDate && new Date(habit.endDate) < new Date())
                       ? "line-through text-gray-400"
                       : "text-gray-900"
                   }`}>
@@ -349,7 +358,13 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
                     variant="ghost"
                     size="sm"
                     onClick={() => handleEdit(habit)}
-                    className="p-1 h-6 w-6 hover:bg-gray-100"
+                    disabled={habit.status === "completed" && !!habit.endDate && new Date(habit.endDate as string) < new Date()}
+                    className={`p-1 h-6 w-6 hover:bg-gray-100 ${
+                      habit.status === "completed" && habit.endDate && new Date(habit.endDate) < new Date() 
+                        ? "opacity-50 cursor-not-allowed" 
+                        : ""
+                    }`}
+                    title={habit.status === "completed" && habit.endDate && new Date(habit.endDate) < new Date() ? "Cannot edit expired habit" : "Edit habit"}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -378,8 +393,9 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
               </div>
               
               {/* 7-day progress boxes */}
-              <div className="flex gap-1">
-                {(() => {
+              <div className="flex items-center justify-between">
+                <div className="flex gap-1">
+                  {(() => {
                   const today = new Date();
                   const days = [];
                   
@@ -414,6 +430,10 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
                   
                   return days;
                 })()}
+                </div>
+                {habit.status === 'completed' && (
+                  <span className="ml-3 text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">Completed</span>
+                )}
               </div>
             </div>
 
@@ -428,8 +448,33 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
                   {getFrequencyText(habit.frequency)}
                 </span>
               </div>
-              {/* Right: Goal Link */}
-              {habit.linkedGoalId && (
+              {/* Right: Frequency (Heroicons) icon + Goal Link with mobile-friendly tooltips */}
+              <div className="flex items-center gap-3">
+                <div className="relative group">
+                  <button
+                    type="button"
+                    onClick={() => toggleFreqTooltip(habit._id)}
+                    className="text-gray-600 inline-flex items-center gap-1"
+                    aria-label="Frequency"
+                  >
+                    {habit.frequency === 'daily' && <ArrowPathIcon className="h-4 w-4" />}
+                    {habit.frequency === 'weekly' && (
+                      <span className="relative inline-flex items-center">
+                        <ArrowPathIcon className="h-4 w-4" />
+                        <span className="absolute -top-1 -right-1 text-[9px] bg-gray-100 text-gray-600 border border-gray-200 rounded px-0.5 leading-none">7</span>
+                      </span>
+                    )}
+                    {habit.frequency === 'monthly' && <CalendarIcon className="h-4 w-4" />}
+                  </button>
+                  <div
+                    className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap z-10 ${
+                      openFreqTips[habit._id] ? 'opacity-100' : 'opacity-0'
+                    } group-hover:opacity-100 transition-opacity duration-200`}
+                  >
+                    {getFrequencyText(habit.frequency)}
+                  </div>
+                </div>
+                {habit.linkedGoalId && (
                 <div className="relative group">
                   <div className="text-indigo-600 cursor-help">
                     <Link className="h-3 w-3" />
@@ -449,6 +494,7 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
                   </div>
                 </div>
               )}
+              </div>
             </div>
           </div>
         ))}
