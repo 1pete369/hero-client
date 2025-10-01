@@ -29,8 +29,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const r = await axiosInstance.get("/auth/check");
       setAuthUser(r.data);
-    } catch {
+    } catch (error) {
+      console.log("Auth check failed, clearing user state");
       setAuthUser(null);
+      // Clear any stored tokens on auth failure
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("authToken");
+      }
     } finally {
       setIsCheckingAuth(false);
     }
@@ -57,8 +62,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    await axiosInstance.post("/auth/logout");
-    setAuthUser(null);
+    try {
+      await axiosInstance.post("/auth/logout");
+    } catch (error) {
+      console.log("Logout request failed, but clearing local state");
+    } finally {
+      setAuthUser(null);
+      // Clear localStorage on logout
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("authToken");
+      }
+    }
   };
 
   useEffect(() => { checkAuth(); }, []);
