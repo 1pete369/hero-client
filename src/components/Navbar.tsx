@@ -28,7 +28,11 @@ export default function Navbar() {
     return null
   }
 
+  // Debug logging
+  console.log('Navbar pathname:', pathname)
+  
   if (pathname.startsWith("/chat") || pathname.startsWith("/workspace")) {
+    console.log('Hiding Navbar for workspace page')
     return null
   }
 
