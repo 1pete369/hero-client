@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ChangeEvent, FormEvent, useState } from "react"
+import toast from "react-hot-toast"
 
 export default function LoginPage() {
   const { authUser, login, isLoggingIn } = useAuth()
@@ -14,29 +15,50 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [mainError, setMainError] = useState("")
 
   const handleEmail = (e: ChangeEvent<HTMLInputElement>) => {
     e.preventDefault()
     const email = e.target.value
     setEmail(email)
-    setMainError("")
   }
 
   const handlePassword = (e: ChangeEvent<HTMLInputElement>) => {
     e.preventDefault()
     const password = e.target.value.trim()
     setPassword(password)
-    setMainError("")
   }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (email === "" || password === "") {
-      setMainError("Fill all the fields required!")
+      toast.error("Please fill in all required fields!")
       return
     }
-    await login({ email, password })
+    
+    try {
+      await login({ email, password })
+      toast.success("Welcome back to GrindFlowClub!")
+    } catch (error: any) {
+      console.error("Login error:", error)
+      
+      // Handle specific API error messages
+      if (error.response?.data?.message) {
+        const message = error.response.data.message
+        if (message.includes("Invalid email or password")) {
+          toast.error("Invalid email or password. Please check your credentials and try again.")
+        } else if (message.includes("User not found")) {
+          toast.error("No account found with this email. Please check your email or create a new account.")
+        } else if (message.includes("Invalid credentials")) {
+          toast.error("Invalid email or password. Please check your credentials and try again.")
+        } else {
+          toast.error(message)
+        }
+      } else if (error.message === "Network Error") {
+        toast.error("Network error. Please check your connection and try again.")
+      } else {
+        toast.error("Failed to sign in. Please try again.")
+      }
+    }
   }
 
   return (
@@ -112,11 +134,6 @@ export default function LoginPage() {
             )}
           </button>
 
-          {mainError && (
-            <div className="w-full bg-red-50 border-2 border-red-200 px-4 py-3 lg:py-3 text-center">
-              <p className="text-red-600 text-sm font-medium">{mainError}</p>
-            </div>
-          )}
 
           <div className="text-center text-gray-600 pt-4 lg:pt-4 border-t border-gray-200 w-full">
             <span className="text-gray-500 text-sm lg:text-sm">

@@ -46,6 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const r = await axiosInstance.post("/auth/signup", d);
       setAuthUser(r.data);
+    } catch (error: any) {
+      // Re-throw the error so components can handle it
+      throw error;
     } finally {
       setIsSigningUp(false);
     }
@@ -56,6 +59,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const r = await axiosInstance.post("/auth/login", d);
       setAuthUser(r.data);
+    } catch (error: any) {
+      // Re-throw the error so components can handle it
+      throw error;
     } finally {
       setIsLoggingIn(false);
     }

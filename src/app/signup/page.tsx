@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ChangeEvent, FormEvent, useState } from "react"
+import toast from "react-hot-toast"
 
 export default function SignUpPage() {
   const { authUser, isSigningUp, signup } = useAuth()
@@ -17,39 +18,59 @@ export default function SignUpPage() {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [mainError, setMainError] = useState("")
-
   const handleName = (e: ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value
     setName(name)
-    setMainError("")
   }
 
   const handleUsername = (e: ChangeEvent<HTMLInputElement>) => {
     const username = e.target.value.trim()
     setUsername(username)
-    setMainError("")
   }
 
   const handleEmail = (e: ChangeEvent<HTMLInputElement>) => {
     const email = e.target.value.trim()
     setEmail(email)
-    setMainError("")
   }
 
   const handlePassword = (e: ChangeEvent<HTMLInputElement>) => {
     const password = e.target.value.trim()
     setPassword(password)
-    setMainError("")
   }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!email || !password || !name || !username) {
-      setMainError("Fill all the fields required!")
+      toast.error("Please fill in all required fields!")
       return
     }
-    await signup({ fullName: name.trim(), username: username.trim(), email, password })
+    
+    try {
+      await signup({ fullName: name.trim(), username: username.trim(), email, password })
+      toast.success("Account created successfully! Welcome to GrindFlowClub!")
+    } catch (error: any) {
+      console.error("Signup error:", error)
+      
+      // Handle specific API error messages
+      if (error.response?.data?.message) {
+        const message = error.response.data.message
+        if (message.includes("Email already in use")) {
+          toast.error("This email is already registered. Please use a different email or try logging in.")
+        } else if (message.includes("Username already taken")) {
+          toast.error("This username is already taken. Please choose a different username.")
+        } else if (message.includes("Password must be at least 6 characters")) {
+          toast.error("Password must be at least 6 characters long.")
+        } else if (message.includes("All fields are required")) {
+          toast.error("Please fill in all required fields.")
+        } else {
+          toast.error(message)
+        }
+      } else if (error.message === "Network Error") {
+        toast.error("Network error. Please check your connection and try again.")
+      } else {
+        toast.error("Failed to create account. Please try again.")
+      }
+    }
   }
 
   return (
@@ -163,13 +184,6 @@ export default function SignUpPage() {
             )}
           </button>
 
-          {mainError && (
-            <div className="w-full bg-red-50 border-2 border-red-200 px-4 lg:px-4 py-3 lg:py-3 text-center">
-              <p className="text-red-600 text-sm lg:text-sm font-medium">
-                {mainError}
-              </p>
-            </div>
-          )}
 
           <div className="text-center text-gray-600 pt-4 lg:pt-4 border-t border-gray-200 w-full">
             <span className="text-gray-500 text-sm lg:text-sm">
