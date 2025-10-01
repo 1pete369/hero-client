@@ -33,7 +33,7 @@ export default function Navbar() {
   
   if (pathname.startsWith("/chat") || pathname.startsWith("/workspace")) {
     console.log('Hiding Navbar for workspace page')
-    return null
+    return <div className="hidden"></div>
   }
 
   if (["/login", "/signup"].some((route) => pathname.startsWith(route))) {
