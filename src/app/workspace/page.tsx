@@ -281,6 +281,7 @@ function WorkspaceContent() {
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
           isMobileMenuOpen={isMobileMenuOpen}
+          onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
         />
         {isMobileMenuOpen && (
           <div

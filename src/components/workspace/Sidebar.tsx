@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useAuth } from "@/context/useAuthContext"
-import { Bell, Settings, LogOut, User, UserCircle } from "lucide-react"
+import { Bell, Settings, LogOut, User, UserCircle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
@@ -11,12 +11,14 @@ interface SidebarProps {
   activeSection: string
   onSectionChange: (section: string) => void
   isMobileMenuOpen: boolean
+  onCloseMobileMenu?: () => void
 }
 
 export default function Sidebar({
   activeSection,
   onSectionChange,
   isMobileMenuOpen,
+  onCloseMobileMenu,
 }: SidebarProps) {
   const { authUser, logout } = useAuth()
   const router = useRouter()
@@ -68,13 +70,22 @@ export default function Sidebar({
         `}
       >
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-sm">GF</span>
               </div>
               <span className="text-lg font-bold text-gray-900">GrindFlow</span>
             </div>
+            {onCloseMobileMenu && (
+              <button
+                onClick={onCloseMobileMenu}
+                className="lg:hidden p-1 hover:bg-gray-100 rounded-md transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            )}
           </div>
         </div>
 
