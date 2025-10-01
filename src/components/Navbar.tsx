@@ -78,7 +78,7 @@ export default function Navbar() {
               <Menu className="text-gray-700" />
             </Button>
           </SheetTrigger>
-          <SheetContent className="border-transparent border-none">
+          <SheetContent className="border-transparent border-none [&>button]:hidden">
             <SheetHeader className="h-screen bg-white border-none border-transparent outline-none outline-transparent">
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <SheetDescription className="sr-only">
