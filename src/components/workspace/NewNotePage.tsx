@@ -2,13 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Save, X, Pin, PinOff } from "lucide-react"
+import { Save, X, Pin, PinOff, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createNote, type CreateNoteData } from "@/services/notes.service"
-import { Checkbox } from "@/components/ui/checkbox"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import toast from "react-hot-toast"
 
 export default function NewNotePage() {
@@ -17,14 +15,37 @@ export default function NewNotePage() {
     title: "",
     content: "",
     category: "personal",
-    tags: [],
+    color: "yellow" as any,
     isPinned: false
   })
   const [isLoading, setIsLoading] = useState(false)
 
+  const bgForColor = (c: string) => (
+    c === 'yellow' ? '#FEF3C7' :
+    c === 'pink' ? '#FDE2E7' :
+    c === 'blue' ? '#DBEAFE' :
+    c === 'green' ? '#DCFCE7' :
+    c === 'purple' ? '#EDE9FE' :
+    c === 'orange' ? '#FFE4CC' :
+    c === 'gray' ? '#F3F4F6' :
+    c === 'white' ? '#FFFFFF' : '#111827'
+  )
+
+  const swatch = (c: string) => (
+    <button
+      key={c}
+      type="button"
+      onClick={() => setFormData(prev => ({ ...prev, color: c as any }))}
+      className={`h-6 w-6 rounded-full border ${formData.color===c ? 'ring-2 ring-black' : ''}`}
+      style={{ backgroundColor: (
+        c==='yellow'?'#FACC15': c==='pink'?'#F472B6': c==='blue'?'#60A5FA': c==='green'?'#34D399': c==='purple'?'#A78BFA': c==='orange'?'#FB923C': c==='gray'?'#9CA3AF': c==='white'?'#FFFFFF':'#111827'
+      ) }}
+      aria-label={`Set color ${c}`}
+    />
+  )
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!formData.title.trim() || !formData.content.trim()) {
       toast.error("Please fill in all required fields")
       return
@@ -35,48 +56,43 @@ export default function NewNotePage() {
       await createNote(formData)
       toast.success("Note created successfully")
       router.push("/workspace?section=notes")
-    } catch (error) {
-      console.error("Failed to create note:", error)
-      toast.error("Failed to create note. Please try again.")
+    } catch (error: any) {
+      const status = error?.response?.status
+      const message = error?.response?.data?.error || error?.message
+      if (status === 403 && typeof message === 'string' && message.toLowerCase().includes('quota')) {
+        toast.error(`${message} — Upgrade your plan to add more.`)
+      } else {
+        console.error("Failed to create note:", error)
+        toast.error("Failed to create note. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Tags feature removed from form UI
-
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* No header/back button */}
-
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white p-0 rounded-lg border border-gray-200">
-          <div className="p-4 md:p-6">
-          {/* Title + Category + Pin (inline) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 items-end gap-4 mb-6">
-            <div className="md:col-span-2">
-              <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">
-                Note Title *
-              </label>
-              <Input
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter note title"
-                className="h-10 text-sm md:text-base"
-                required
-              />
-            </div>
-            <div className="flex items-end gap-3 justify-start md:justify-end">
-              <div className="min-w-[160px]">
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value: any) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger className="h-10">
+    <div className="min-h-[calc(100vh-4rem)] -mx-4 sm:mx-0" style={{ backgroundColor: bgForColor(formData.color as any) }}>
+      <form onSubmit={handleSubmit} className="h-full">
+        <div className="w-full max-w-4xl mx-auto p-6 md:p-10">
+          {/* Back */}
+          <div className="flex items-center justify-between mb-4">
+            <Button type="button" variant="ghost" size="sm" onClick={() => router.push('/workspace?section=notes')} className="h-8 w-8 p-0" aria-label="Back to notes">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </div>
+          {/* Title / Category / Pin / Color */}
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+            <input
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="Enter note title"
+              className="w-full bg-transparent text-2xl font-semibold placeholder-gray-500 focus:outline-none"
+              required
+            />
+            <div className="flex items-center gap-3">
+              <div className="min-w[160px]">
+                <Select value={formData.category} onValueChange={(value: any) => setFormData({ ...formData, category: value })}>
+                  <SelectTrigger className="bg-white/60 backdrop-blur border-0 focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -98,45 +114,35 @@ export default function NewNotePage() {
                 {formData.isPinned ? <Pin className="h-4 w-4 fill-current" /> : <PinOff className="h-4 w-4" />}
                 <span className="hidden sm:inline">{formData.isPinned ? "Pinned" : "Pin"}</span>
               </Button>
+              <div className="flex items-center gap-2">
+                {['yellow','pink','blue','green','purple','orange','gray','white','black'].map(swatch)}
+              </div>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="mb-6">
-            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">
-              Content *
-            </label>
-            <Textarea
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="Write your note content here..."
-              rows={14}
-              className="resize-none scrollbar-hide text-xs md:text-sm min-h-[220px] md:min-h-[340px] lg:min-h-[400px]"
-              required
+          {/* Content (TipTap) */}
+          <div className="mt-6">
+            <RichTextEditor
+              content={formData.content}
+              onChange={(html) => setFormData({ ...formData, content: html })}
+              placeholder="Write your note..."
+              borderless
+              backgroundColor={bgForColor(formData.color as any)}
+              minHeight={240}
+              maxHeight={500}
             />
           </div>
 
-          
-          {/* Actions (inside the form card) */}
-          <div className="flex gap-3">
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
+          {/* Actions */}
+          <div className="flex gap-3 mt-6">
+            <Button type="submit" disabled={isLoading} className="bg-purple-600 hover:bg-purple-700 text-white">
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? "Creating..." : "Create Note"}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={isLoading}
-            >
+            <Button type="button" variant="outline" onClick={() => router.push('/workspace?section=notes')} disabled={isLoading}>
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
-          </div>
           </div>
         </div>
       </form>

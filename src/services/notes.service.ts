@@ -8,6 +8,7 @@ export interface Note {
   title: string
   content: string
   category: 'personal' | 'work' | 'learning' | 'ideas'
+  color: 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orange' | 'gray' | 'white' | 'black'
   tags: string[]
   isPinned: boolean
   linkedGoalId?: string
@@ -21,6 +22,7 @@ export interface CreateNoteData {
   title: string
   content: string
   category: 'personal' | 'work' | 'learning' | 'ideas'
+  color?: 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orange' | 'gray' | 'white' | 'black'
   tags?: string[]
   isPinned?: boolean
   linkedGoalId?: string

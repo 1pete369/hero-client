@@ -7,14 +7,15 @@ const normalizeApiBase = (raw: string) => {
 };
 
 const getBaseURL = () => {
+  const isDev = process.env.NODE_ENV !== "production";
   const rawFromEnv = process.env.NEXT_PUBLIC_MAIN_API_URL || process.env.NEXT_PUBLIC_API_URL || "";
 
-  // Browser: honor explicit env if provided; otherwise same-origin for dev
-  if (typeof window !== "undefined") {
-    return rawFromEnv ? normalizeApiBase(rawFromEnv) : "/api";
+  // In development, always use same-origin proxy to avoid CORS/cookie issues
+  if (isDev) {
+    return "/api";
   }
 
-  // SSR: same logic
+  // In production, honor explicit env if provided; otherwise same-origin
   return rawFromEnv ? normalizeApiBase(rawFromEnv) : "/api";
 };
 
@@ -45,14 +46,12 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Log error for debugging
-    console.log('API Error:', error.message);
-    
-    // Handle network errors specifically for iOS Safari
-    if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
-      console.log('Network error detected, this might be iOS Safari related');
+    const status = error?.response?.status;
+    // Avoid noisy logs for expected 4xx errors; only surface unexpected 5xx
+    if (status && status >= 500) {
+      console.error('API Error:', error.message);
     }
-    
+    // Minimal handling for iOS Safari network anomalies without logging
     return Promise.reject(error);
   }
 );

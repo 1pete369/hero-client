@@ -194,13 +194,8 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
     
   console.log("Processed category data:", categoryData);
   
-  // If no category data, create some sample data for testing
-  const finalCategoryData = categoryData.length > 0 ? categoryData : [
-    { name: "Food & Dining", value: 21.41, count: 1, type: "expense", fill: "#ef4444" },
-    { name: "Transportation", value: 20.00, count: 1, type: "expense", fill: "#ef4444" },
-    { name: "Salary", value: 1280.00, count: 1, type: "income", fill: "#10b981" },
-  ];
-  
+  // Use only real data; no demo fallback
+  const finalCategoryData = categoryData;
   console.log("Final category data for chart:", finalCategoryData);
 
   // Recent transactions for mini list

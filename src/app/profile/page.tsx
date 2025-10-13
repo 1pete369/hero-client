@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, User, Mail, Calendar, Shield, Cog, Pencil } from "lucide-react";
 import { useEffect } from "react";
+import Image from "next/image";
+import GoogleIcon from "../../../google.png";
 import Link from "next/link";
 
 export default function ProfilePage() {
@@ -14,6 +16,7 @@ export default function ProfilePage() {
   useEffect(() => { checkAuth(); }, []);
 
   const joined = authUser?.createdAt ? new Date(authUser.createdAt).toLocaleDateString() : "—";
+  const provider = (authUser as any)?.provider || ((authUser as any)?.googleId ? "google" : "email");
 
   if (!authUser) {
     return (
@@ -39,6 +42,19 @@ export default function ProfilePage() {
               <h1 className="text-2xl font-bold text-gray-900">{authUser?.fullName}</h1>
               <p className="text-gray-600">@{authUser?.username}</p>
               <p className="text-sm text-gray-500 flex items-center gap-2 mt-1"><Calendar className="h-4 w-4" /> Joined {joined}</p>
+              <div className="mt-2">
+                {provider === "google" ? (
+                  <span className="inline-flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
+                    <Image src={GoogleIcon} alt="Google" width={14} height={14} className="h-[14px] w-[14px]" />
+                    Signed in with Google
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2 text-xs font-medium px-2 py-1 rounded-full bg-gray-50 text-gray-700 border border-gray-200">
+                    <Mail className="h-3 w-3" />
+                    Email/password
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <Button asChild>

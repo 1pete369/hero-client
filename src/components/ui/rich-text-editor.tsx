@@ -2,6 +2,8 @@
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import Image from '@tiptap/extension-image'
+import Placeholder from '@tiptap/extension-placeholder'
 import { Button } from './button'
 import { 
   Bold, 
@@ -15,26 +17,37 @@ import {
   Heading2,
   Heading3
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 interface RichTextEditorProps {
   content: string
   onChange: (content: string) => void
   placeholder?: string
   className?: string
+  borderless?: boolean
+  backgroundColor?: string
+  minHeight?: string | number
+  maxHeight?: string | number
 }
 
 export function RichTextEditor({ 
   content, 
   onChange, 
   placeholder = "Start writing...",
-  className = ""
+  className = "",
+  borderless = false,
+  backgroundColor,
+  minHeight = 200,
+  maxHeight
 }: RichTextEditorProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [, forceUpdate] = useState({})
 
+  const contentMinHeight = useMemo(() => typeof minHeight === 'number' ? `${minHeight}px` : String(minHeight), [minHeight])
+  const contentMaxHeight = useMemo(() => maxHeight ? (typeof maxHeight === 'number' ? `${maxHeight}px` : String(maxHeight)) : undefined, [maxHeight])
+
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, Image.configure({ inline: false }), Placeholder.configure({ placeholder })],
     content,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
@@ -42,7 +55,7 @@ export function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4',
+        class: `prose prose-sm max-w-none focus:outline-none ${borderless ? '' : 'p-4'}`
       },
     },
     immediatelyRender: false,
@@ -54,25 +67,24 @@ export function RichTextEditor({
 
   if (!isMounted || !editor) {
     return (
-      <div className={`border border-gray-200 rounded-lg bg-white w-full ${className}`}>
-        <div className="flex items-center gap-1 p-1 sm:p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg overflow-x-auto scrollbar-hide min-w-0">
-          <div className="h-7 w-7 sm:h-8 sm:w-8 bg-gray-200 rounded animate-pulse flex-shrink-0"></div>
-          <div className="h-7 w-7 sm:h-8 sm:w-8 bg-gray-200 rounded animate-pulse flex-shrink-0"></div>
-          <div className="h-7 w-7 sm:h-8 sm:w-8 bg-gray-200 rounded animate-pulse flex-shrink-0"></div>
-        </div>
-        <div className="min-h-[200px] p-4">
-          <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-        </div>
+      <div className={`${borderless ? '' : 'border border-gray-200 rounded-lg bg-white'} w-full ${className}`}>
+        <div className={`${borderless ? '' : 'flex items-center gap-1 p-1 sm:p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg'} overflow-x-auto scrollbar-hide min-w-0`}></div>
+        <div className="min-h-[200px]" />
       </div>
     )
   }
 
+  const toolbarBase = "flex items-center gap-1 p-1 sm:p-2 overflow-x-auto scrollbar-hide min-w-0";
+  const toolbarDecor = borderless ? "" : "border-b border-gray-200 bg-gray-50 rounded-t-lg";
+
+  const placeholderStyle: React.CSSProperties = borderless
+    ? { top: 0, left: 0 }
+    : { top: 16, left: 16 } // 1rem offset when padded
+
   return (
-    <div className={`border border-gray-200 rounded-lg bg-white w-full ${className}`}>
+    <div className={`${borderless ? '' : 'border border-gray-200 rounded-lg bg-white'} w-full ${className}`} style={{ background: borderless ? backgroundColor : undefined }}>
       {/* Toolbar */}
-      <div className="flex items-center gap-1 p-1 sm:p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg overflow-x-auto scrollbar-hide min-w-0">
+      <div className={`${toolbarBase} ${toolbarDecor}`}>
         <Button
           type="button"
           variant={editor.isActive('bold') ? "default" : "ghost"}
@@ -212,16 +224,45 @@ export function RichTextEditor({
         >
           <Redo className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
+        
+        <div className="w-px h-5 sm:h-6 bg-gray-300 mx-1 flex-shrink-0" />
+        
+        <label className="h-7 w-auto sm:h-8 px-2 inline-flex items-center justify-center text-xs sm:text-sm cursor-pointer bg-white hover:bg-gray-100 border rounded-md">
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (e) => {
+              const inputEl = e.currentTarget
+              const file = inputEl?.files?.[0]
+              if (!file) return
+              try {
+                const form = new FormData()
+                form.append('image', file)
+                const res = await fetch('/api/upload/image', { method: 'POST', body: form })
+                const data = await res.json()
+                if (data?.imageUrl) {
+                  editor.chain().focus().setImage({ src: data.imageUrl }).run()
+                }
+              } catch (err) {
+                console.error('Image upload failed', err)
+              } finally {
+                if (inputEl) inputEl.value = ''
+              }
+            }}
+          />
+          <span>Image</span>
+        </label>
       </div>
       
       {/* Editor Content */}
-      <div className="min-h-[200px] relative">
+      <div className="relative" style={{ background: backgroundColor || 'transparent', minHeight: contentMinHeight, maxHeight: contentMaxHeight, overflow: contentMaxHeight ? 'auto' : undefined }}>
         <EditorContent 
           editor={editor} 
           className="focus-within:outline-none"
         />
         {!content && (
-          <div className="absolute top-4 left-4 text-gray-400 pointer-events-none">
+          <div className="absolute text-gray-400 pointer-events-none" style={placeholderStyle}>
             {placeholder}
           </div>
         )}
