@@ -8,10 +8,13 @@ import Image from "next/image"
 import GoogleIcon from "../../google.png"
 
 function FallbackRedirectButton() {
+  // In production, you can set NEXT_PUBLIC_BACKEND_AUTH_URL to your backend base
+  const base = (process.env.NEXT_PUBLIC_BACKEND_AUTH_URL || "").replace(/\/+$/, "");
+  const href = base ? `${base}/api/auth/google/oauth` : "/api/auth/google/oauth";
   return (
     <button
       type="button"
-      onClick={() => { window.location.href = "/api/auth/google/oauth" }}
+      onClick={() => { window.location.href = href }}
       className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-white border border-gray-300 px-4 py-2 text-gray-800 hover:bg-gray-50 shadow-sm"
     >
       <Image src={GoogleIcon} alt="Google" width={18} height={18} className="h-[18px] w-[18px]" />

@@ -17,6 +17,9 @@ export default function ProfilePage() {
 
   const joined = authUser?.createdAt ? new Date(authUser.createdAt).toLocaleDateString() : "—";
   const provider = (authUser as any)?.provider || ((authUser as any)?.googleId ? "google" : "email");
+  const emailPrefix = authUser?.email ? String(authUser.email).split("@")[0] : "user";
+  const displayFullName = authUser?.fullName || authUser?.username || emailPrefix;
+  const displayUsername = authUser?.username || emailPrefix;
 
   if (!authUser) {
     return (
@@ -35,12 +38,12 @@ export default function ProfilePage() {
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={authUser?.profilePic || ""} alt={authUser?.fullName || "User"} />
-              <AvatarFallback>{(authUser?.fullName?.[0] || authUser?.username?.[0] || "U").toUpperCase()}</AvatarFallback>
+              <AvatarImage src={authUser?.profilePic || ""} alt={displayFullName || "User"} />
+              <AvatarFallback>{(displayFullName?.[0] || displayUsername?.[0] || "U").toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{authUser?.fullName}</h1>
-              <p className="text-gray-600">@{authUser?.username}</p>
+              <h1 className="text-2xl font-bold text-gray-900">{displayFullName}</h1>
+              <p className="text-gray-600">@{displayUsername}</p>
               <p className="text-sm text-gray-500 flex items-center gap-2 mt-1"><Calendar className="h-4 w-4" /> Joined {joined}</p>
               <div className="mt-2">
                 {provider === "google" ? (
@@ -69,8 +72,8 @@ export default function ProfilePage() {
               <CardDescription>Your public profile details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="text-sm"><span className="text-gray-500">Full name:</span> <span className="font-medium">{authUser?.fullName}</span></div>
-              <div className="text-sm"><span className="text-gray-500">Username:</span> <span className="font-medium">@{authUser?.username}</span></div>
+              <div className="text-sm"><span className="text-gray-500">Full name:</span> <span className="font-medium">{displayFullName}</span></div>
+              <div className="text-sm"><span className="text-gray-500">Username:</span> <span className="font-medium">@{displayUsername}</span></div>
               <div className="text-sm flex items-center gap-2"><Mail className="h-4 w-4 text-gray-500" /> <span className="font-medium">{authUser?.email}</span></div>
             </CardContent>
           </Card>
