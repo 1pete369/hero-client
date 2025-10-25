@@ -76,18 +76,13 @@ export default function LoginPage() {
           </div>
 
           <div className="w-full">
-            <label
-              htmlFor="email"
-              className="block text-sm font-semibold text-gray-700 mb-2"
-            >
-              Email
-            </label>
             <input
               required
               type="email"
               id="email"
+              aria-label="Email"
               className="w-full border-2 border-gray-300 focus:border-indigo-600 outline-none px-4 py-3 placeholder:text-gray-400 bg-white text-black transition-all duration-200 hover:border-gray-400 text-base"
-              placeholder="Enter your email"
+              placeholder="Email"
               autoComplete="off"
               value={email}
               onChange={handleEmail}
@@ -95,18 +90,13 @@ export default function LoginPage() {
           </div>
 
           <div className="w-full">
-            <label
-              htmlFor="password"
-              className="block text-sm font-semibold text-gray-700 mb-2"
-            >
-              Password
-            </label>
             <input
               required
               type="password"
               id="password"
+              aria-label="Password"
               className="w-full border-2 border-gray-300 focus:border-indigo-600 outline-none px-4 py-3 placeholder:text-gray-400 bg-white text-black transition-all duration-200 hover:border-gray-400 text-base"
-              placeholder="Enter your password"
+              placeholder="Password"
               autoComplete="off"
               value={password}
               onChange={handlePassword}

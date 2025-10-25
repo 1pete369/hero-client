@@ -96,6 +96,14 @@ export default function Navbar() {
                   </li>
                   <li>
                     <Link
+                      href={"/pricing"}
+                      className="hover:text-indigo-600 px-2 text-gray-700 font-medium"
+                    >
+                      Pricing
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
                       href={"/workspace"}
                       className="hover:text-indigo-600 px-2 text-gray-700 font-medium"
                     >
@@ -153,6 +161,14 @@ export default function Navbar() {
                 className="hover:text-indigo-600 px-2 text-gray-700 font-medium"
               >
                 Home
+              </Link>
+            </li>
+            <li>
+              <Link
+                href={"/pricing"}
+                className="hover:text-indigo-600 px-2 text-gray-700 font-medium"
+              >
+                Pricing
               </Link>
             </li>
             <li>

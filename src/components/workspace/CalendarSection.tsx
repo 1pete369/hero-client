@@ -97,8 +97,11 @@ export default function CalendarSection({ currentDate, onDateChange }: CalendarS
     if (!selectedDate) return []
     const dateTodos = todos.filter(todo => occursOn(todo, selectedDate))
     
-    // Sort by start time
+    // Sort by start time (unscheduled at end)
     return dateTodos.sort((a, b) => {
+      if (!a.startTime && !b.startTime) return 0
+      if (!a.startTime) return 1
+      if (!b.startTime) return -1
       const [aHour, aMin] = a.startTime.split(':').map(Number)
       const [bHour, bMin] = b.startTime.split(':').map(Number)
       const aMinutes = aHour * 60 + aMin
@@ -275,7 +278,7 @@ export default function CalendarSection({ currentDate, onDateChange }: CalendarS
                       {day.todos.slice(0, 3).map(todo => (
                         <div
                           key={todo._id}
-                          title={`${todo.title} - ${formatTime(todo.startTime)}`}
+                          title={`${todo.title}${todo.startTime ? ` - ${formatTime(todo.startTime)}` : ''}`}
                           className={`group relative rounded-md border text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1 pr-2 overflow-hidden ${getTodoColorClasses(todo.color)} ${
                             isCompletedOnDate(todo, day.date) ? 'opacity-60' : ''
                           }`}
@@ -283,7 +286,7 @@ export default function CalendarSection({ currentDate, onDateChange }: CalendarS
                           <span className={`absolute left-0 top-0 h-full w-0.5 sm:w-1 ${getTodoRailColor(todo.color)}`} />
                           <div className="flex items-center gap-1">
                             <span className={`truncate font-medium flex-1 min-w-0 ${isCompletedOnDate(todo, day.date) ? 'line-through text-gray-500' : ''}`}>{todo.title}</span>
-                            <span className="text-[9px] sm:text-[10px] text-gray-600">{formatTime(todo.startTime)}</span>
+                            <span className="text-[9px] sm:text-[10px] text-gray-600">{todo.startTime ? formatTime(todo.startTime) : 'Unscheduled'}</span>
                           </div>
                         </div>
                       ))}
@@ -331,7 +334,7 @@ export default function CalendarSection({ currentDate, onDateChange }: CalendarS
                       <span className={`absolute left-0 top-0 h-full w-1 ${getTodoRailColor(todo.color)}`} />
                       <div className="flex items-center gap-2 text-sm text-gray-700">
                         <Clock className="h-4 w-4" />
-                        <span className="font-medium">{formatTime(todo.startTime)} - {formatTime(todo.endTime)}</span>
+                        <span className="font-medium">{todo.startTime ? formatTime(todo.startTime) : 'Unscheduled'} - {todo.endTime ? formatTime(todo.endTime) : ''}</span>
                         <span className={`ml-auto px-2 py-0.5 rounded-full text-xs ${
                           todo.priority === 'high' ? 'bg-red-100 text-red-700' : todo.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
                         }`}>{todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}</span>
@@ -391,7 +394,7 @@ export default function CalendarSection({ currentDate, onDateChange }: CalendarS
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
                           <span className="font-medium">
-                            {formatTime(todo.startTime)} - {formatTime(todo.endTime)}
+                            {todo.startTime ? formatTime(todo.startTime) : 'Unscheduled'}{todo.endTime ? ` - ${formatTime(todo.endTime)}` : ''}
                           </span>
                         </div>
                         

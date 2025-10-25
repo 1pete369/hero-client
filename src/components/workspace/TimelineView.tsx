@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { Clock, Dot, ChevronLeft, ChevronRight } from "lucide-react"
+import ConflictWarningDialog from "@/components/ui/ConflictWarningDialog"
+import { detectTimeConflicts, type TimeConflict } from "@/utils/timeConflict"
 import type { Todo } from "@/services"
 import { updateTodo } from "@/services"
 import {
@@ -10,9 +12,12 @@ import {
   DragStartEvent,
   PointerSensor,
   TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
   closestCenter,
+  useDroppable,
+  DragOverlay,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { useDraggable } from '@dnd-kit/core'
@@ -65,7 +70,8 @@ function DraggableTimelineBlock({
 
 
   const style = {
-    transform: CSS.Translate.toString(transform),
+    // Lock horizontal movement for scheduled timeline blocks to avoid cursor misalignment
+    transform: transform ? `translate3d(0, ${transform.y ?? 0}px, 0)` : undefined,
     top,
     height,
     width,
@@ -89,7 +95,7 @@ function DraggableTimelineBlock({
         "before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 before:rounded-l-md",
         leftColor,
         blockColor,
-        isDragging ? "cursor-grabbing shadow-lg z-50 opacity-80" : "cursor-grab",
+        isDragging ? "cursor-grabbing shadow-lg z-50" : "cursor-grab",
         isPressing ? "scale-105 shadow-lg z-40" : "",
       ].join(" ")}
       aria-label={`Press and hold to drag ${todo.title}`}
@@ -112,7 +118,7 @@ function DraggableTimelineBlock({
           </div>
         </div>
         <div className="mt-0.5 text-[10px] font-mono text-gray-500">
-          {formatTo12Hour(todo.startTime)} – {formatTo12Hour(todo.endTime)} • {duration < 60 ? `${duration}m` : `${Math.floor(duration / 60)}h ${duration % 60}m`}
+          {todo.startTime && todo.endTime ? `${formatTo12Hour(todo.startTime)} – ${formatTo12Hour(todo.endTime)} • ${duration < 60 ? `${duration}m` : `${Math.floor(duration / 60)}h ${duration % 60}m`}` : 'Unscheduled'}
         </div>
       </div>
     </div>
@@ -138,7 +144,11 @@ const RAIL_WIDTH = 40;                     // left time rail width (px)
 
 /* ------------ Time formatting helpers ------------ */
 const formatTo12Hour = (time24: string): string => {
-  const [hours, minutes] = time24.split(':').map(Number)
+  let [hours, minutes] = time24.split(':').map(Number)
+  // Normalize 24:00 to 00:00 (midnight)
+  if (hours >= 24) {
+    hours = hours % 24
+  }
   const period = hours >= 12 ? 'PM' : 'AM'
   const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
   return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`
@@ -169,6 +179,9 @@ const COLOR_BLOCK: Record<string, string> = {
   yellow: "bg-yellow-50 border-yellow-200",
   gray: "bg-gray-50 border-gray-200",
 }
+
+// 30-minute default duration for newly scheduled items
+const DEFAULT_DURATION_MINUTES = 30
 
 /* ------------ Helpers ------------ */
 const timeToMinutes = (t: string) => {
@@ -251,6 +264,8 @@ export default function TimelineView({
   onTodoUpdate,
 }: TimelineViewProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  // Prevent auto-scroll jumping right after a drag/drop update
+  const suppressAutoScrollRef = useRef(false)
   // Get today's date in local timezone to avoid UTC conversion issues
   const getLocalDateString = (date: Date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -264,6 +279,9 @@ export default function TimelineView({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null)
   const [isPressing, setIsPressing] = useState<string | null>(null)
+  const [showConflictDialog, setShowConflictDialog] = useState(false)
+  const [conflicts, setConflicts] = useState<TimeConflict[]>([])
+  const [pendingSchedule, setPendingSchedule] = useState<null | { todoId: string; title: string; startTime: string; endTime: string; dateISO: string }>(null)
   
   // Configure sensors for better drag experience (including touch)
   const sensors = useSensors(
@@ -277,7 +295,8 @@ export default function TimelineView({
         delay: 250, // Press and hold for 250ms to start drag
         tolerance: 5, // Allow small movement during press and hold
       },
-    })
+    }),
+    useSensor(KeyboardSensor)
   )
 
   // Returns true if a todo occurs on the given YYYY-MM-DD date considering recurrence
@@ -311,13 +330,19 @@ export default function TimelineView({
       .filter((t) => {
         return occursOn(t, currentSelectedDate)
       })
-      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+      .sort((a, b) => {
+        if (!a.startTime && !b.startTime) return 0
+        if (!a.startTime) return 1
+        if (!b.startTime) return -1
+        return timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+      })
     
     return result
   }, [todos, internalSelectedDate])
 
   const metas = useMemo(() => {
-    const m = filtered.map((t) => ({ todo: t, ...computeBlock(t.startTime, t.endTime) }))
+    const sched = filtered.filter(t => t.startTime && t.endTime)
+    const m = sched.map((t) => ({ todo: t, ...computeBlock(t.startTime as string, t.endTime as string) }))
     const cols = assignColumns(m.map(({ todo, start, end }) => ({ id: todo._id, start, end })))
     return m.map((x) => ({
       ...x,
@@ -354,7 +379,7 @@ export default function TimelineView({
   }
 
   const handleDragStart = (event: DragStartEvent) => {
-    console.log('Drag started!', event)
+    // Drag started
     const { active } = event
     setActiveId(active.id as string)
     
@@ -362,7 +387,7 @@ export default function TimelineView({
     const todo = todos.find(t => t._id === active.id)
     if (todo) {
       setActiveTodo(todo)
-      console.log('Dragging todo:', todo.title)
+      // dragging todo
     }
   }
 
@@ -375,26 +400,61 @@ export default function TimelineView({
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, delta } = event
+    const { active, delta, over } = event
     
     // Reset pressing state when drag ends
     setIsPressing(null)
     
+    // If dropped onto a timeline slot AND the task is unscheduled, create schedule with default duration
+    if (activeTodo && !activeTodo.scheduledDate && over && typeof over.id === 'string' && over.id.toString().startsWith('slot-')) {
+      suppressAutoScrollRef.current = true
+      const minute = parseInt(over.id.toString().replace('slot-',''), 10)
+      const rounded = Math.max(0, Math.min(1440 - DEFAULT_DURATION_MINUTES, Math.round(minute / 5) * 5))
+      const newStartTime = minutesToTime(rounded)
+      const newEndTime = minutesToTime(rounded + DEFAULT_DURATION_MINUTES)
+      // Check conflicts
+      const todayTasks = todos
+        .filter(t => t.scheduledDate && (t.scheduledDate.split('T')[0] === internalSelectedDate) && t.startTime && t.endTime)
+        .map(t => ({ _id: t._id, title: t.title, scheduledDate: t.scheduledDate as string, startTime: t.startTime as string, endTime: t.endTime as string, priority: (t as any).priority }))
+      const slot = { date: internalSelectedDate, start: newStartTime, end: newEndTime }
+      const found = detectTimeConflicts(slot, todayTasks)
+      if (found.length > 0) {
+        setConflicts(found)
+        setPendingSchedule({ todoId: activeTodo._id, title: activeTodo.title, startTime: newStartTime, endTime: newEndTime, dateISO: internalSelectedDate })
+        setShowConflictDialog(true)
+      } else {
+        try {
+          await updateTodo({ _id: activeTodo._id, dueDate: internalSelectedDate, startTime: newStartTime, endTime: newEndTime })
+          onTodoUpdate?.()
+        } catch (error) {
+          console.error('Failed to schedule todo:', error)
+        }
+      }
+      setActiveId(null)
+      setActiveTodo(null)
+      // Re-enable auto-scroll shortly after state settles
+      setTimeout(() => { suppressAutoScrollRef.current = false }, 800)
+      return
+    }
+
     if (!activeTodo || !delta.y) {
       setActiveId(null)
       setActiveTodo(null)
       return
     }
 
+    suppressAutoScrollRef.current = true
     // Calculate new time based on drag distance
     const deltaMinutes = Math.round(delta.y / MINUTE_TO_PX)
-    const originalStartMinutes = timeToMinutes(activeTodo.startTime)
-    const originalEndMinutes = timeToMinutes(activeTodo.endTime)
+    const originalStartMinutes = timeToMinutes(activeTodo.startTime as string)
+    const originalEndMinutes = timeToMinutes(activeTodo.endTime as string)
     const duration = originalEndMinutes - originalStartMinutes
-    
-    // Round to nearest 5-minute interval
-    const newStartMinutes = Math.max(0, Math.min(1435, Math.round((originalStartMinutes + deltaMinutes) / 5) * 5)) // 1435 = 23:55 (last 5-min slot)
-    const newEndMinutes = Math.max(5, Math.min(1440, newStartMinutes + duration)) // 1440 = 24:00
+
+    // Snap to 5-minute grid, but preserve duration near day end by clamping start
+    const proposedStart = Math.round((originalStartMinutes + deltaMinutes) / 5) * 5
+    const boundedStart = Math.max(0, Math.min(1440 - duration, proposedStart))
+    const newStartMinutes = boundedStart
+    const newEndMinutes = newStartMinutes + duration
     
     const newStartTime = minutesToTime(newStartMinutes)
     const newEndTime = minutesToTime(newEndMinutes)
@@ -415,19 +475,22 @@ export default function TimelineView({
 
     setActiveId(null)
     setActiveTodo(null)
+    // Re-enable auto-scroll shortly after state settles
+    setTimeout(() => { suppressAutoScrollRef.current = false }, 800)
   }
 
 
   // Auto-scroll to first task or current time
   useEffect(() => {
     if (!scrollRef.current) return
+    if (suppressAutoScrollRef.current) return
     
     const today = getLocalDateString(new Date())
     
     if (filtered.length > 0) {
       // If there are tasks, scroll to the first task
-      const firstTask = filtered[0]
-      const firstTaskStartMinutes = timeToMinutes(firstTask.startTime)
+      const firstTask = filtered.find(t => t.startTime) || filtered[0]
+      const firstTaskStartMinutes = firstTask.startTime ? timeToMinutes(firstTask.startTime) : 0
       const y = Math.max(0, firstTaskStartMinutes * MINUTE_TO_PX - 160)
       scrollRef.current.scrollTop = y
     } else if (internalSelectedDate === today) {
@@ -441,7 +504,7 @@ export default function TimelineView({
   }, [internalSelectedDate, filtered])
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white">
+    <div className="flex h-full flex-col rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white overflow-hidden box-border">
       {/* Header (compact) - only show if showHeader is true */}
       {showHeader && (
         <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-3 py-2.5">
@@ -504,6 +567,52 @@ export default function TimelineView({
            onDragStart={handleDragStart}
            onDragEnd={handleDragEnd}
          >
+          {/* Global drag overlay so items remain visible across containers */}
+          <DragOverlay dropAnimation={null}>
+            {activeTodo && !activeTodo.scheduledDate ? (
+              <div className="pointer-events-none z-50">
+                {(() => {
+                  const colorKey = (activeTodo.color ?? 'blue') as string
+                  const leftColor = COLOR_LEFT[colorKey] ?? COLOR_LEFT.blue
+                  return (
+                    <div className={[
+                      'relative inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px] text-gray-900 bg-white',
+                      'shadow-md',
+                      'before:absolute before:left-0.5 before:top-1/2 before:-translate-y-1/2 before:h-3.5 before:w-1.5 before:rounded before:content-[""]',
+                      leftColor.replace('before:bg-', 'before:bg-'),
+                      'border-gray-200',
+                    ].join(' ')}>
+                      <span className="truncate max-w-[200px]">{activeTodo.title}</span>
+                    </div>
+                  )
+                })()}
+              </div>
+            ) : null}
+          </DragOverlay>
+           {/* Inbox of unscheduled todos */}
+           {(() => {
+             const unscheduled = todos.filter((t) => !t.scheduledDate)
+             if (unscheduled.length === 0) return null
+             return (
+               <div className="border-b border-gray-200 bg-white/90 px-3 py-2.5">
+                 <div className="flex items-center justify-between mb-2">
+                   <div className="flex items-center gap-2">
+                     <span className="text-[12px] font-semibold text-gray-900">Inbox</span>
+                     <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 text-[10px]">
+                       {unscheduled.length}
+                     </span>
+                   </div>
+                   <span className="text-[10px] text-gray-500">Drag onto the timeline</span>
+                 </div>
+                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                   {unscheduled.map((t) => (
+                     <InboxDraggable key={t._id} todo={t} colorMap={COLOR_BLOCK} onPressStart={() => handlePressStart(t._id)} onPressEnd={handlePressEnd} isPressing={isPressing === t._id} />
+                   ))}
+                 </div>
+               </div>
+             )
+           })()}
+
            <div ref={scrollRef} className="relative h-full w-full overflow-y-auto scrollbar-hide">
           {/* Full-day canvas */}
           <div className="relative pt-6" style={{ height: 24 * HOUR_HEIGHT }}>
@@ -511,11 +620,19 @@ export default function TimelineView({
             {timeLabels.map(({ minutes }, i) => (
               <div key={`h-${i}`} className="absolute inset-x-0 border-t border-gray-100" style={{ top: minutes * MINUTE_TO_PX }} />
             ))}
-            {/* Quarter lines (extra light) */}
-            {Array.from({ length: 24 * 3 }, (_, i) => {
-              const minutes = (i + 1) * 15
-              return <div key={`q-${i}`} className="absolute inset-x-0 border-t border-gray-50" style={{ top: minutes * MINUTE_TO_PX }} />
-            })}
+            {/* Quarter lines (extra light) - every 15 min across full 24h (00:15..23:45) */}
+            {Array.from({ length: 24 }, (_, h) => (
+              [15, 30, 45].map((q) => {
+                const minutes = h * 60 + q
+                return (
+                  <div
+                    key={`q-${h}-${q}`}
+                    className="absolute inset-x-0 border-t border-gray-50"
+                    style={{ top: minutes * MINUTE_TO_PX }}
+                  />
+                )
+              })
+            ))}
 
             {/* Left time rail (tight) */}
             <div className="pointer-events-none absolute left-0 top-0" style={{ width: RAIL_WIDTH }}>
@@ -532,6 +649,10 @@ export default function TimelineView({
 
             {/* Grid area (tasks) */}
             <div className="absolute top-0" style={{ left: RAIL_WIDTH, right: 8 }}>
+              {/* Droppable time slots (every 5 minutes) */}
+              {Array.from({ length: 288 }, (_, i) => i * 5).map((m) => (
+                <DroppableSlot key={m} id={`slot-${m}`} top={m * MINUTE_TO_PX} height={5 * MINUTE_TO_PX} />
+              ))}
 
               {/* Tasks */}
               {metas.map(({ todo, top, height, start, end, duration, col, widthCols }) => {
@@ -571,7 +692,59 @@ export default function TimelineView({
 
         </div>
         </DndContext>
+        {/* Conflict dialog for drag-scheduling */}
+        <ConflictWarningDialog
+          isOpen={showConflictDialog}
+          onClose={() => { setShowConflictDialog(false); setConflicts([]); setPendingSchedule(null) }}
+          onConfirm={async () => {
+            if (pendingSchedule) {
+              try {
+                await updateTodo({ _id: pendingSchedule.todoId, dueDate: pendingSchedule.dateISO, startTime: pendingSchedule.startTime, endTime: pendingSchedule.endTime })
+                onTodoUpdate?.()
+              } catch (err) {
+                console.error('Failed to schedule after confirm:', err)
+              }
+            }
+            setShowConflictDialog(false)
+            setConflicts([])
+            setPendingSchedule(null)
+          }}
+          conflicts={conflicts}
+          newTodoTitle={pendingSchedule?.title || ''}
+          newTimeSlot={`${formatTo12Hour(pendingSchedule?.startTime || '00:00')} - ${formatTo12Hour(pendingSchedule?.endTime || '00:00')} on ${internalSelectedDate}`}
+        />
       </div>
     </div>
+  )
+}
+
+// Draggable chip for Inbox items
+function InboxDraggable({ todo, colorMap, onPressStart, onPressEnd, isPressing }: { todo: Todo, colorMap: Record<string,string>, onPressStart: () => void, onPressEnd: () => void, isPressing: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: todo._id })
+  const style = { transform: transform ? `translate3d(${transform.x ?? 0}px, ${transform.y ?? 0}px, 0)` : undefined, touchAction: 'none' as const }
+  const baseColor = (todo.color ?? 'blue') as string
+  const leftAccent = COLOR_LEFT[baseColor] ?? COLOR_LEFT.blue
+  const classes = [
+    'relative shrink-0 inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px] text-gray-900 bg-white',
+    'shadow-sm hover:shadow transition',
+    'before:absolute before:left-0.5 before:top-1/2 before:-translate-y-1/2 before:h-3.5 before:w-1.5 before:rounded before:content-[""]',
+    leftAccent.replace('before:bg-', 'before:bg-'),
+    'border-gray-200',
+    isDragging ? 'cursor-grabbing shadow-md opacity-0' : 'cursor-grab',
+    isPressing ? 'scale-105 shadow-md' : '',
+  ].join(' ')
+  return (
+    <div ref={setNodeRef} style={style} className={classes} onTouchStart={onPressStart} onTouchEnd={onPressEnd} onTouchCancel={onPressEnd} {...listeners} {...attributes}>
+      <span className="truncate max-w-[160px]">{todo.title}</span>
+      <span className="text-[10px] text-gray-500">Drag to schedule</span>
+    </div>
+  )
+}
+
+// Invisible droppable slot covering 15-min interval row
+function DroppableSlot({ id, top, height }: { id: string; top: number; height: number }) {
+  const { setNodeRef } = useDroppable({ id })
+  return (
+    <div ref={setNodeRef} className="absolute inset-x-0" style={{ top, height }} aria-hidden="true" />
   )
 }

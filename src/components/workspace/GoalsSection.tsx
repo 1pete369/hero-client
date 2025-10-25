@@ -313,7 +313,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
       </Dialog>
 
       {/* Goals Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-start px-2">
         {goals.map((goal) => {
           const urgency = getUrgencyLevel(goal.targetDate)
           const textClass =
@@ -336,7 +336,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
           return (
             <div
               key={goal._id}
-              className={`bg-white p-4 rounded-lg border border-gray-200 transition-shadow w-full`}
+              className={`bg-white p-4 rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow w-full`}
             >
               {/* Dates Row */}
               <div className={`flex items-center justify-between text-xs ${textClass} mb-2`}>

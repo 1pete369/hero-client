@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { toast } from "react-hot-toast"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
@@ -47,7 +49,10 @@ import { detectTimeConflicts, type TimeConflict } from "@/utils/timeConflict"
 
 // Time formatting helper
 const formatTo12Hour = (time24: string): string => {
-  const [hours, minutes] = time24.split(':').map(Number)
+  let [hours, minutes] = time24.split(':').map(Number)
+  if (hours >= 24) {
+    hours = hours % 24
+  }
   const period = hours >= 12 ? 'PM' : 'AM'
   const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
   return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`
@@ -56,16 +61,16 @@ const formatTo12Hour = (time24: string): string => {
 // Color utility function
 const getTodoColorClasses = (color: string) => {
   const colorMap = {
-    blue: "bg-blue-50 border-blue-200 text-blue-900",
-    green: "bg-green-50 border-green-200 text-green-900",
-    purple: "bg-purple-50 border-purple-200 text-purple-900",
-    orange: "bg-orange-50 border-orange-200 text-orange-900",
-    red: "bg-red-50 border-red-200 text-red-900",
-    pink: "bg-pink-50 border-pink-200 text-pink-900",
-    indigo: "bg-indigo-50 border-indigo-200 text-indigo-900",
-    teal: "bg-teal-50 border-teal-200 text-teal-900",
-    yellow: "bg-yellow-50 border-yellow-200 text-yellow-900",
-    gray: "bg-gray-50 border-gray-200 text-gray-900",
+    blue: "bg-blue-50 text-blue-900",
+    green: "bg-green-50 text-green-900",
+    purple: "bg-purple-50 text-purple-900",
+    orange: "bg-orange-50 text-orange-900",
+    red: "bg-red-50 text-red-900",
+    pink: "bg-pink-50 text-pink-900",
+    indigo: "bg-indigo-50 text-indigo-900",
+    teal: "bg-teal-50 text-teal-900",
+    yellow: "bg-yellow-50 text-yellow-900",
+    gray: "bg-gray-50 text-gray-900",
   }
   return colorMap[color as keyof typeof colorMap] || colorMap.blue
 }
@@ -85,6 +90,38 @@ const getCheckboxColorClasses = (color: string) => {
     gray: "border-gray-500 data-[state=checked]:bg-gray-500 data-[state=checked]:border-gray-500",
   }
   return map[color] || map.blue
+}
+
+
+// Todo color type and helpers
+type TodoColor =
+  | "blue"
+  | "green"
+  | "purple"
+  | "orange"
+  | "red"
+  | "pink"
+  | "indigo"
+  | "teal"
+  | "yellow"
+  | "gray"
+
+const TODO_COLORS: TodoColor[] = [
+  "blue",
+  "green",
+  "purple",
+  "orange",
+  "red",
+  "pink",
+  "indigo",
+  "teal",
+  "yellow",
+  "gray",
+]
+
+const getRandomTodoColor = (): TodoColor => {
+  const idx = Math.floor(Math.random() * TODO_COLORS.length)
+  return TODO_COLORS[idx]
 }
 
 
@@ -164,8 +201,10 @@ export default function TodosSection({
     icon: "⚙️",
     recurring: "none" as "none" | "daily" | "weekly" | "monthly",
     days: [] as string[],
-    color: "blue" as "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray",
+    color: getRandomTodoColor() as TodoColor,
   })
+  // Allow creating todos without immediate scheduling (default ON)
+  const [scheduleLater, setScheduleLater] = useState(true)
   
 
    // Helper function to capitalize first letter only
@@ -178,6 +217,7 @@ export default function TodosSection({
   const occursToday = (todo: Todo) => {
     const today = getTodayISO()
     const scheduledISO = (todo.scheduledDate || '').split('T')[0]
+    if (!scheduledISO) return false
     if (scheduledISO === today) return true
     const rec: any = (todo as any).recurring
     if (!rec || rec === 'none') return false
@@ -200,8 +240,18 @@ export default function TodosSection({
     return !occursToday(todo)
   }
 
+  // Helper: is the todo scheduled strictly before today (not including recurring today)
+  const isPastDateForTodo = (todo: Todo) => {
+    const today = getTodayISO()
+    const todoDateStr = (todo.scheduledDate || '').split('T')[0]
+    if (!todoDateStr) return false
+    if (occursToday(todo)) return false
+    return todoDateStr < today
+  }
+
    // Helper function to check if current time is within todo's time block
-   const isCurrentlyActive = (scheduledDate: string, startTime: string, endTime: string) => {
+  const isCurrentlyActive = (scheduledDate: string | null, startTime: string | null, endTime: string | null) => {
+    if (!scheduledDate || !startTime || !endTime) return false
      const todoDate = new Date(scheduledDate).toISOString().split('T')[0]
      const today = new Date().toISOString().split('T')[0]
      
@@ -260,6 +310,13 @@ export default function TodosSection({
     }
   }, [todos, onTodosUpdate])
 
+  // Randomize color when opening a fresh create form (not editing)
+  useEffect(() => {
+    if (showTodoForm && !editingTodo) {
+      setFormData((prev) => ({ ...prev, color: getRandomTodoColor() }))
+    }
+  }, [showTodoForm, editingTodo])
+
   // Smart timer that updates exactly when todos start/end
   useEffect(() => {
     const updateTimer = () => {
@@ -277,6 +334,7 @@ export default function TodosSection({
       // Collect all start and end times for today's todos
       const allTimes: number[] = []
       todayTodos.forEach(todo => {
+        if (!todo.startTime || !todo.endTime) return
         const [startHour, startMin] = todo.startTime.split(':').map(Number)
         const [endHour, endMin] = todo.endTime.split(':').map(Number)
         
@@ -319,35 +377,43 @@ export default function TodosSection({
     e.preventDefault()
     console.log("handleSubmit called with formData:", formData)
 
-    // Validate time range
-    if (formData.startTime >= formData.endTime) {
-      toast.error("End time must be after start time")
-      return
+    // Validate time range only if scheduling now
+    if (!scheduleLater) {
+      if (formData.startTime >= formData.endTime) {
+        toast.error("End time must be after start time")
+        return
+      }
     }
 
     try {
-      if (!formData.dueDate || formData.dueDate < getTodayISO()) {
-        toast.error("Date must be today or a future date.")
-        return
+      if (!scheduleLater) {
+        if (!formData.dueDate || formData.dueDate < getTodayISO()) {
+          toast.error("Date must be today or a future date.")
+          return
+        }
       }
 
       // Check for time conflicts before proceeding
       const slot = { date: formData.dueDate, start: formData.startTime, end: formData.endTime }
       // Only check conflicts against today's todos
       const todayISO = getTodayISO()
-      const existing = todos.filter(t => (t.scheduledDate.split('T')[0] === todayISO)).map(t => ({
-        _id: t._id,
-        title: t.title,
-        scheduledDate: t.scheduledDate,
-        startTime: t.startTime,
-        endTime: t.endTime,
-        priority: t.priority,
-      }))
-      const found = detectTimeConflicts(slot, existing, editingTodo?._id)
-      if (found.length > 0) {
-        setConflicts(found)
-        setShowConflictDialog(true)
-        return
+      const existing = todos
+        .filter(t => (t.scheduledDate && t.startTime && t.endTime && t.scheduledDate.split('T')[0] === todayISO))
+        .map(t => ({
+          _id: t._id,
+          title: t.title,
+          scheduledDate: t.scheduledDate as string,
+          startTime: t.startTime as string,
+          endTime: t.endTime as string,
+          priority: t.priority,
+        }))
+      if (!scheduleLater) {
+        const found = detectTimeConflicts(slot, existing, editingTodo?._id)
+        if (found.length > 0) {
+          setConflicts(found)
+          setShowConflictDialog(true)
+          return
+        }
       }
 
       await proceedWithTodoSubmission()
@@ -368,10 +434,10 @@ export default function TodosSection({
           title: formData.title,
           description: "",
           priority: formData.priority,
-          dueDate: formData.dueDate,
+          dueDate: scheduleLater ? null : formData.dueDate,
           category: formData.category,
-          startTime: formData.startTime,
-          endTime: formData.endTime,
+          startTime: scheduleLater ? null : formData.startTime,
+          endTime: scheduleLater ? null : formData.endTime,
           icon: formData.icon,
           recurring: formData.recurring,
           days: formData.days,
@@ -390,10 +456,10 @@ export default function TodosSection({
           title: formData.title,
           description: "",
           priority: formData.priority,
-          dueDate: formData.dueDate,
+          dueDate: scheduleLater ? null : formData.dueDate,
           category: formData.category,
-          startTime: formData.startTime,
-          endTime: formData.endTime,
+          startTime: scheduleLater ? null : formData.startTime,
+          endTime: scheduleLater ? null : formData.endTime,
           icon: formData.icon,
           recurring: formData.recurring,
           days: formData.days,
@@ -416,8 +482,9 @@ export default function TodosSection({
         icon: "⚙️",
         recurring: "none" as "none" | "daily" | "weekly" | "monthly",
         days: [],
-        color: "blue" as "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray",
+        color: getRandomTodoColor() as TodoColor,
       })
+      setScheduleLater(true)
       setShowTodoForm(false)
       toast.success(editingTodo ? "Todo updated" : "Todo created")
     } catch (error) {
@@ -435,7 +502,7 @@ export default function TodosSection({
     // Close any existing dialogs
     
     // Convert UTC date properly for form input
-    const date = new Date(todo.scheduledDate)
+    const date = new Date(todo.scheduledDate || new Date())
     const year = date.getUTCFullYear()
     const month = String(date.getUTCMonth() + 1).padStart(2, "0")
     const day = String(date.getUTCDate()).padStart(2, "0")
@@ -445,15 +512,17 @@ export default function TodosSection({
       title: todo.title,
       description: "",
       priority: todo.priority,
-      dueDate: formattedDate,
+      dueDate: todo.scheduledDate ? formattedDate : getTodayISO(),
       category: todo.category,
-      startTime: todo.startTime,
-      endTime: todo.endTime,
+      startTime: todo.startTime || '09:00',
+      endTime: todo.endTime || '10:00',
       icon: todo.icon,
       recurring: todo.recurring,
       days: todo.days,
       color: todo.color || "blue",
     })
+    // Reflect current scheduling state in the toggle: on when unscheduled
+    setScheduleLater(!Boolean(todo.scheduledDate))
     setShowTodoForm(true)
   }
 
@@ -501,12 +570,12 @@ export default function TodosSection({
     const today = getTodayISO()
     
     // Get todo's date in YYYY-MM-DD format (no timezone conversion)
-    const todoDateStr = todo.scheduledDate.split('T')[0]
+    const todoDateStr = (todo.scheduledDate || '').split('T')[0]
     
     // Check if todo is scheduled for today or repeats today
     const isToday = occursToday(todo)
-    const isPast = todoDateStr < today
-    const isFuture = todoDateStr > today
+    const isPast = todoDateStr ? todoDateStr < today : false
+    const isFuture = todoDateStr ? todoDateStr > today : false
     
     // Extra filters
     const matchesPriority =
@@ -530,11 +599,11 @@ export default function TodosSection({
     }
     if (filter === "upcoming") {
       // Show future incomplete todos
-      return isFuture && !todo.isCompleted && matchesPriority && matchesCategory
+      return !!todoDateStr && isFuture && !todo.isCompleted && matchesPriority && matchesCategory
     }
     if (filter === "past") {
       // Show past todos (completed and incomplete)
-      return isPast && matchesPriority && matchesCategory
+      return !!todoDateStr && isPast && matchesPriority && matchesCategory
     }
     return matchesPriority && matchesCategory
   })
@@ -568,7 +637,7 @@ export default function TodosSection({
       if (occursToday(todo)) {
         groupDate = todayStr
       } else {
-        groupDate = todo.scheduledDate.split('T')[0] // Get just YYYY-MM-DD
+        groupDate = (todo.scheduledDate || '').split('T')[0] // Get just YYYY-MM-DD
       }
       
       if (!grouped[groupDate]) {
@@ -601,8 +670,8 @@ export default function TodosSection({
       todos: grouped[dateStr].sort((a, b) => {
         // For past todos, sort by scheduled time (reverse chronological order)
         if (dateStr < getTodayISO()) {
-          const aTime = timeToMinutes(a.startTime)
-          const bTime = timeToMinutes(b.startTime)
+          const aTime = a.startTime ? timeToMinutes(a.startTime) : -1
+          const bTime = b.startTime ? timeToMinutes(b.startTime) : -1
           return bTime - aTime // Newest first
         }
         
@@ -630,12 +699,12 @@ export default function TodosSection({
       })
       
       const pastTodos = todos.filter((todo) => {
-        const todoDateStr = todo.scheduledDate.split('T')[0]
+        const todoDateStr = (todo.scheduledDate || '').split('T')[0]
         return todoDateStr < today
       })
       
       const upcomingTodos = todos.filter((todo) => {
-        const todoDateStr = todo.scheduledDate.split('T')[0]
+        const todoDateStr = (todo.scheduledDate || '').split('T')[0]
         return todoDateStr > today && !todo.isCompleted
       })
 
@@ -674,7 +743,7 @@ export default function TodosSection({
       />
       {/* Add/Edit Form */}
       <Dialog open={showTodoForm} onOpenChange={setShowTodoForm}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg border-solid border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">
               {editingTodo ? "Edit Todo" : "Create New Todo"}
@@ -684,7 +753,6 @@ export default function TodosSection({
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Title */}
             <div className="space-y-2">
-              <Label htmlFor="title">Todo Title</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -693,251 +761,271 @@ export default function TodosSection({
                 }
                 placeholder="Enter your todo title"
                 required
+                className="border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus-visible:outline-none focus:outline-none focus-visible:border-black"
               />
             </div>
 
+            {/* Color */}
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="grid grid-cols-10 gap-2 w-full">
+                {[
+                  { value: "blue", color: "bg-blue-500", borderColor: "border-blue-600" },
+                  { value: "green", color: "bg-green-500", borderColor: "border-green-600" },
+                  { value: "purple", color: "bg-purple-500", borderColor: "border-purple-600" },
+                  { value: "orange", color: "bg-orange-500", borderColor: "border-orange-600" },
+                  { value: "red", color: "bg-red-500", borderColor: "border-red-600" },
+                  { value: "pink", color: "bg-pink-500", borderColor: "border-pink-600" },
+                  { value: "indigo", color: "bg-indigo-500", borderColor: "border-indigo-600" },
+                  { value: "teal", color: "bg-teal-500", borderColor: "border-teal-600" },
+                  { value: "yellow", color: "bg-yellow-500", borderColor: "border-yellow-600" },
+                  { value: "gray", color: "bg-gray-500", borderColor: "border-gray-600" },
+                ].map((colorOption) => (
+                  <label
+                    key={colorOption.value}
+                    className="cursor-pointer group"
+                  >
+                    <input
+                      type="radio"
+                      name="color"
+                      value={colorOption.value}
+                      checked={formData.color === colorOption.value}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          color: e.target.value as "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray",
+                        })
+                      }
+                      className="sr-only"
+                    />
+                    <div
+                      className={`w-7 h-7 rounded-full ${colorOption.color} transition-transform ${
+                        formData.color === colorOption.value
+                          ? "border-3 border-black"
+                          : "border-0"
+                      }`}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
 
-            {/* Priority and Category Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority</Label>
-                <Select
-                  value={formData.priority}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      priority: value as "low" | "medium" | "high",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      category: value as
-                        | "personal"
-                        | "work"
-                        | "learning"
-                        | "health"
-                        | "shopping"
-                        | "finance",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="personal">Personal</SelectItem>
-                    <SelectItem value="work">Work</SelectItem>
-                    <SelectItem value="learning">Learning</SelectItem>
-                    <SelectItem value="health">Health</SelectItem>
-                    <SelectItem value="shopping">Shopping</SelectItem>
-                    <SelectItem value="finance">Finance</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label>Color</Label>
-                <div className="grid grid-cols-10 gap-2 w-full">
-                  {[
-                    { value: "blue", color: "bg-blue-500", borderColor: "border-blue-600" },
-                    { value: "green", color: "bg-green-500", borderColor: "border-green-600" },
-                    { value: "purple", color: "bg-purple-500", borderColor: "border-purple-600" },
-                    { value: "orange", color: "bg-orange-500", borderColor: "border-orange-600" },
-                    { value: "red", color: "bg-red-500", borderColor: "border-red-600" },
-                    { value: "pink", color: "bg-pink-500", borderColor: "border-pink-600" },
-                    { value: "indigo", color: "bg-indigo-500", borderColor: "border-indigo-600" },
-                    { value: "teal", color: "bg-teal-500", borderColor: "border-teal-600" },
-                    { value: "yellow", color: "bg-yellow-500", borderColor: "border-yellow-600" },
-                    { value: "gray", color: "bg-gray-500", borderColor: "border-gray-600" },
-                  ].map((colorOption) => (
-                    <label
-                      key={colorOption.value}
-                      className="cursor-pointer group"
-                    >
-                      <input
-                        type="radio"
-                        name="color"
-                        value={colorOption.value}
-                        checked={formData.color === colorOption.value}
-                        onChange={(e) =>
+
+            {/* Advanced Settings */}
+            <Accordion type="single" collapsible>
+              <AccordionItem value="advanced">
+                <AccordionTrigger>
+                  Advanced settings
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4">
+                    {/* Schedule later toggle */}
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Schedule later</Label>
+                      <Switch checked={scheduleLater} onCheckedChange={(v: boolean) => setScheduleLater(Boolean(v))} />
+                    </div>
+                    {/* Priority and Category Row */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="priority">Priority</Label>
+                        <Select
+                          value={formData.priority}
+                          onValueChange={(value) =>
+                            setFormData({
+                              ...formData,
+                              priority: value as "low" | "medium" | "high",
+                            })
+                          }
+                        >
+                  <SelectTrigger className="border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus:outline-none">
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="category">Category</Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(value) =>
+                            setFormData({
+                              ...formData,
+                              category: value as
+                                | "personal"
+                                | "work"
+                                | "learning"
+                                | "health"
+                                | "shopping"
+                                | "finance",
+                            })
+                          }
+                        >
+                  <SelectTrigger className="border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus:outline-none">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="personal">Personal</SelectItem>
+                            <SelectItem value="work">Work</SelectItem>
+                            <SelectItem value="learning">Learning</SelectItem>
+                            <SelectItem value="health">Health</SelectItem>
+                            <SelectItem value="shopping">Shopping</SelectItem>
+                            <SelectItem value="finance">Finance</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Recurrence */}
+                    <div className="space-y-2">
+                      <Label>Frequency</Label>
+                      <Select
+                        value={formData.recurring}
+                        onValueChange={(value) =>
                           setFormData({
                             ...formData,
-                            color: e.target.value as "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray",
+                            recurring: value as "none" | "daily" | "weekly" | "monthly",
                           })
                         }
-                        className="sr-only"
-                      />
-                      <div
-                        className={`w-6 h-6 rounded-full ${colorOption.color} transition-all group-hover:scale-110 ${
-                          formData.color === colorOption.value
-                            ? `border-4 ${colorOption.borderColor}`
-                            : "border-0"
-                        }`}
-                      />
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
+                      >
+                        <SelectTrigger className="border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus:outline-none">
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">One-time</SelectItem>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {formData.recurring === "weekly" && (
+                        <div className="mt-2">
+                          <Label className="mb-1 block text-xs text-gray-600">Repeat on</Label>
+                          <div className="grid grid-cols-7 gap-1">
+                            {["sun","mon","tue","wed","thu","fri","sat"].map((d) => {
+                              const active = formData.days.includes(d)
+                              return (
+                                <button
+                                  key={d}
+                                  type="button"
+                                  onClick={() => {
+                                    const days = active
+                                      ? formData.days.filter((x) => x !== d)
+                                      : [...formData.days, d]
+                                    setFormData({ ...formData, days })
+                                  }}
+                                  className={`text-xs py-1.5 rounded border transition-colors ${
+                                    active
+                                      ? "bg-indigo-600 border-indigo-600 text-white"
+                                      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  {d.toUpperCase().slice(0,3)}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
-            {/* Recurrence */}
-            <div className="space-y-2">
-              <Label>Frequency</Label>
-              <Select
-                value={formData.recurring}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    recurring: value as "none" | "daily" | "weekly" | "monthly",
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">One-time</SelectItem>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                </SelectContent>
-              </Select>
-              {formData.recurring === "weekly" && (
-                <div className="mt-2">
-                  <Label className="mb-1 block text-xs text-gray-600">Repeat on</Label>
-                  <div className="grid grid-cols-7 gap-1">
-                    {["sun","mon","tue","wed","thu","fri","sat"].map((d) => {
-                      const active = formData.days.includes(d)
-                      return (
-                        <button
-                          key={d}
-                          type="button"
-                          onClick={() => {
-                            const days = active
-                              ? formData.days.filter((x) => x !== d)
-                              : [...formData.days, d]
-                            setFormData({ ...formData, days })
-                          }}
-                          className={`text-xs py-1.5 rounded border transition-colors ${
-                            active
-                              ? "bg-indigo-600 border-indigo-600 text-white"
-                              : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
-                          }`}
-                        >
-                          {d.toUpperCase().slice(0,3)}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Date and Time Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 h-6">
-                  <Label htmlFor="dueDate">Date</Label>
-                  <Badge
-                    variant="secondary"
-                    className={`text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 ${
-                      formData.dueDate && formData.dueDate > getTodayISO()
-                        ? ""
-                        : "invisible"
-                    }`}
-                  >
-                    <Clock className="h-3 w-3 mr-1" />
-                    Scheduled
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dueDate: e.target.value })
-                    }
-                    required
-                    className="w-full"
-                  />
+                    {/* Date and Time Row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 h-6">
+                          <Label htmlFor="dueDate">Date</Label>
+                          <Badge
+                            variant="secondary"
+                            className={`text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 ${
+                              formData.dueDate && formData.dueDate > getTodayISO()
+                                ? ""
+                                : "invisible"
+                            }`}
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            Scheduled
+                          </Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            id="dueDate"
+                            type="date"
+                            value={formData.dueDate}
+                            onChange={(e) =>
+                              setFormData({ ...formData, dueDate: e.target.value })
+                            }
+                            required={!scheduleLater}
+                            className="w-full border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus-visible:outline-none focus:outline-none"
+                          />
                   <div className="flex gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => setFormData({ ...formData, dueDate: getTodayISO() })}
-                      className={`text-xs ${formData.dueDate === getTodayISO() ? 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700' : ''}`}
+                      className={`text-xs border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:ring-0 focus-visible:ring-0 ${formData.dueDate === getTodayISO() ? 'bg-indigo-600 text-white hover:bg-indigo-700' : ''}`}
                     >
-                      Today
+                              Today
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => setFormData({ ...formData, dueDate: getTomorrowISO() })}
-                      className={`text-xs ${formData.dueDate === getTomorrowISO() ? 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700' : ''}`}
+                      className={`text-xs border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:ring-0 focus-visible:ring-0 ${formData.dueDate === getTomorrowISO() ? 'bg-indigo-600 text-white hover:bg-indigo-700' : ''}`}
                     >
-                      Tomorrow
-                    </Button>
+                              Tomorrow
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Start/End on one row for mobile; separate on sm+ */}
+                      <div className="grid grid-cols-2 gap-4 sm:contents">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 h-6">
+                            <Label htmlFor="startTime">Start</Label>
+                          </div>
+                          <Input
+                            id="startTime"
+                            type="time"
+                            value={formData.startTime}
+                            onChange={(e) =>
+                              setFormData({ ...formData, startTime: e.target.value })
+                            }
+                            required={!scheduleLater}
+                            className="w-full border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus-visible:outline-none focus:outline-none"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 h-6">
+                            <Label htmlFor="endTime">End</Label>
+                          </div>
+                          <Input
+                            id="endTime"
+                            type="time"
+                            value={formData.endTime}
+                            onChange={(e) =>
+                              setFormData({ ...formData, endTime: e.target.value })
+                            }
+                            required={!scheduleLater}
+                            className="w-full border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus-visible:outline-none focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              {/* Start/End on one row for mobile; separate on sm+ */}
-              <div className="grid grid-cols-2 gap-4 sm:contents">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 h-6">
-                    <Label htmlFor="startTime">Start</Label>
-                  </div>
-                  <Input
-                    id="startTime"
-                    type="time"
-                    value={formData.startTime}
-                    onChange={(e) =>
-                      setFormData({ ...formData, startTime: e.target.value })
-                    }
-                    required
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 h-6">
-                    <Label htmlFor="endTime">End</Label>
-                  </div>
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={formData.endTime}
-                    onChange={(e) =>
-                      setFormData({ ...formData, endTime: e.target.value })
-                    }
-                    required
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
               <Button
                 type="submit"
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
                 disabled={isSaving}
               >
                 {isSaving ? (
@@ -970,10 +1058,10 @@ export default function TodosSection({
                       | "weekly"
                       | "monthly",
                     days: [],
-                    color: "blue" as "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray",
+                    color: getRandomTodoColor() as TodoColor,
                   })
                 }}
-                className="flex-1"
+                className="flex-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
               >
                 Cancel
               </Button>
@@ -985,9 +1073,9 @@ export default function TodosSection({
 
       {/* Todos List */}
       {filteredTodos.length > 0 && (
-        <div className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto  pr-2 px-2 scrollbar-hide">
           {groupedTodos.map((group) => (
-            <div key={group.date} className="space-y-3">
+            <div key={group.date} className={`${filter === "past" ? "space-y-2 mb-4" : "space-y-2 mb-4"}`}>
             {/* Date Section Header */}
             <div className="flex items-center gap-3">
               <div className="w-1 h-6 bg-indigo-600 rounded-full"></div>
@@ -1014,11 +1102,13 @@ export default function TodosSection({
             </div>
 
             {/* Tasks for this date */}
-            <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
+            <div className={`grid ${filter === "past" ? "gap-6 sm:gap-7" : "gap-4"} grid-cols-[repeat(auto-fill,minmax(280px,1fr))]`}>
               {group.todos.map((todo) => (
+                
                  <div
                    key={todo._id}
-                   className={`transition-all h-auto min-h-[96px] w-full rounded-lg border ${getTodoColorClasses(todo.color || 'blue')} ${getTodoCardStyling()}`}
+                   className={`transition-all h-auto min-h-[96px] w-full rounded border-solid border-3 border-black  
+                  shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${getTodoColorClasses(todo.color)}`}
                  >
                   {/* Top Section - Title and Actions */}
                   <div className="flex items-center justify-between  px-3 pt-3 ">
@@ -1064,8 +1154,8 @@ export default function TodosSection({
                               )}
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => deletingId ? null : handleEdit(todo)} className={deletingId ? "pointer-events-none opacity-50" : ""}>
+                          <DropdownMenuContent align="end" className="rounded border-solid border-3 border-black bg-white shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+                            <DropdownMenuItem onClick={() => (deletingId || isPastDateForTodo(todo)) ? null : handleEdit(todo)} className={(deletingId || isPastDateForTodo(todo)) ? "pointer-events-none opacity-50" : "hover:bg-indigo-50"}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
@@ -1097,18 +1187,19 @@ export default function TodosSection({
                     <div className="flex items-center gap-2  ">
                       <Clock className="h-4 w-4 text-gray-600" />
                       <span className="text-gray-700 font-medium">
-                        {formatTo12Hour(todo.startTime)} - {formatTo12Hour(todo.endTime)}
+                        {todo.startTime && todo.endTime ? `${formatTo12Hour(todo.startTime)} - ${formatTo12Hour(todo.endTime)}` : 'Unscheduled'}
                       </span>
                     </div>
                     {/* Right: live + scheduled */}
                     <div className="flex items-center gap-3 ">
-                      {isCurrentlyActive(todo.scheduledDate, todo.startTime, todo.endTime) && (
+                      {isCurrentlyActive(todo.scheduledDate ?? null, todo.startTime ?? null, todo.endTime ?? null) && (
                         <span className="flex items-center gap-1 text-purple-600" title="Happening now">
                           <span className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></span>
                           Live
                         </span>
                       )}
                       {(() => {
+                      if (!todo.scheduledDate) return null
                       const d = new Date(todo.scheduledDate)
                       const y = d.getUTCFullYear()
                       const m = String(d.getUTCMonth() + 1).padStart(2, "0")

@@ -175,7 +175,7 @@ function WorkspaceContent() {
                   refreshTrigger={todosRefreshTrigger}
                 />
               </div>
-              <div className="hidden lg:block lg:col-span-1 h-full overflow-hidden">
+              <div className="hidden lg:block lg:col-span-1 h-full overflow-hidden pr-2 pb-2">
                 <TimelineView
                   todos={todos}
                   selectedDate={selectedDate}
@@ -291,10 +291,10 @@ function WorkspaceContent() {
           />
         )}
 
-        <main className="flex-1 p-3 sm:p-4 lg:p-4 h-full overflow-hidden">
-          <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
-            <div className="mb-4 pr-2 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between w-full flex-shrink-0">
-              <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0">
+        <main className="flex-1  h-full overflow-hidden">
+          <div className="max-w-7xl mx-auto w-full h-full flex flex-col ">
+            <div className="mb-4 pr-2 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between w-full flex-shrink-0  border-b-3 border-black ">
+              <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0 p-2">
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">
                     {activeSection === "finance" ? "Finance" : 
@@ -319,14 +319,14 @@ function WorkspaceContent() {
                 </Button>
               </div>
 
-              <div className="flex items-start justify-between  sm:items-center gap-2 lg:gap-4 w-full lg:w-auto lg:justify-end">
+              <div className="flex items-start justify-between   sm:items-center gap-2 lg:gap-4 w-full lg:w-auto lg:justify-end">
                  {/* Filter Dropdown */}
                  {activeSection === "todos" && (
                   <DropdownMenu>
                      <DropdownMenuTrigger asChild>
                        <Button
                         variant="outline"
-                        className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium min-w-fit px-2 py-1.5 sm:px-3 sm:py-2 h-8"
+                        className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium min-w-fit px-2 py-1.5 sm:px-3 sm:py-2 h-8 rounded border-solid border-3 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
                        >
                          {(() => {
                            const filterOptions = {
@@ -351,7 +351,7 @@ function WorkspaceContent() {
                          })()}
                        </Button>
                      </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-40 sm:w-48">
+                    <DropdownMenuContent align="start" className="w-40 sm:w-48 rounded border-solid border-3 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                        {([
                          { key: "all", icon: List, count: todoCounts.all, label: "All", color: "text-blue-600", bgColor: "bg-blue-50", countBg: "bg-blue-100 text-blue-700" },
                          { key: "pending", icon: Clock, count: todoCounts.pending, label: "Pending", color: "text-orange-600", bgColor: "bg-orange-50", countBg: "bg-orange-100 text-orange-700" },
@@ -437,7 +437,7 @@ function WorkspaceContent() {
                     {/* Priority Filter */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="text-xs sm:text-sm gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 h-8">
+                        <Button variant="outline" className="text-xs sm:text-sm gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 h-8 rounded border-solid border-3 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                           <SlidersHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
                           {(() => {
                             const colorMap: Record<string, string> = {
@@ -462,7 +462,7 @@ function WorkspaceContent() {
                           })()}
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-40 sm:w-44">
+                      <DropdownMenuContent align="start" className="w-40 sm:w-44 rounded border-solid border-3 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                         {(() => {
                           const renderItem = (p: "all" | "high" | "medium" | "low") => {
                             const textColor = p === "high" ? "text-red-600" : p === "medium" ? "text-orange-600" : p === "low" ? "text-green-600" : "text-blue-600"
@@ -492,7 +492,7 @@ function WorkspaceContent() {
                     {/* Category Filter */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="text-xs sm:text-sm gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 h-8">
+                        <Button variant="outline" className="text-xs sm:text-sm gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 h-8 rounded border-solid border-3 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                           {(() => {
                             const iconMap: Record<string, React.ReactNode> = {
                               personal: <User className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />,
@@ -522,7 +522,7 @@ function WorkspaceContent() {
                           })()}
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48 sm:w-56">
+                      <DropdownMenuContent align="start" className="w-48 sm:w-56 rounded border-solid border-3 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                         {[
                           { key: "all", icon: Tag, label: "All Categories", color: "text-gray-700" },
                           { key: "personal", icon: User, label: "Personal", color: "text-purple-700" },
@@ -578,7 +578,8 @@ function WorkspaceContent() {
                       else if (activeSection === "habits") setShowHabitsForm(true)
                       else if (activeSection === "notes") router.push("/workspace?section=notes&noteAction=new")
                     }}
-                    className="hidden lg:inline-flex bg-indigo-600 hover:bg-indigo-700 text-white"
+                    variant="outline"
+                    className="hidden lg:inline-flex text-black bg-white rounded border-solid border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
                     size="sm"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -605,7 +606,7 @@ function WorkspaceContent() {
             else if (activeSection === "notes") router.push("/workspace?section=notes&noteAction=new")
           }}
           aria-label={`Add ${activeSection}`}
-          className="lg:hidden fixed bottom-5 right-5 z-50 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-14 h-14 flex items-center justify-center"
+          className="lg:hidden fixed bottom-5 right-5 z-50 rounded-full bg-white text-black border-solid border-3 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:ring-2 focus:ring-black/40 focus:ring-offset-2 w-14 h-14 flex items-center justify-center"
         >
           <Plus className="h-6 w-6" aria-hidden="true" />
         </button>
