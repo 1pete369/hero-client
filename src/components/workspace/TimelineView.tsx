@@ -89,10 +89,10 @@ function DraggableTimelineBlock({
       ref={setNodeRef}
       style={style}
       className={[
-        "absolute rounded-md border shadow-sm transition",
+        "absolute rounded border shadow-sm transition",
         "hover:shadow-md",
         todo.isCompleted ? "opacity-60" : "",
-        "before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 before:rounded-l-md",
+        "before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 before:rounded",
         leftColor,
         blockColor,
         isDragging ? "cursor-grabbing shadow-lg z-50" : "cursor-grab",
@@ -264,6 +264,14 @@ export default function TimelineView({
   onTodoUpdate,
 }: TimelineViewProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  const railWidth = isMobile ? 32 : RAIL_WIDTH
   // Prevent auto-scroll jumping right after a drag/drop update
   const suppressAutoScrollRef = useRef(false)
   // Get today's date in local timezone to avoid UTC conversion issues
@@ -279,6 +287,9 @@ export default function TimelineView({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null)
   const [isPressing, setIsPressing] = useState<string | null>(null)
+  // Temporarily hide items from Inbox once user drops them to schedule,
+  // until the backend refresh arrives, to avoid duplicate chip + block.
+  const [pendingScheduleIds, setPendingScheduleIds] = useState<Set<string>>(new Set())
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [conflicts, setConflicts] = useState<TimeConflict[]>([])
   const [pendingSchedule, setPendingSchedule] = useState<null | { todoId: string; title: string; startTime: string; endTime: string; dateISO: string }>(null)
@@ -412,6 +423,8 @@ export default function TimelineView({
       const rounded = Math.max(0, Math.min(1440 - DEFAULT_DURATION_MINUTES, Math.round(minute / 5) * 5))
       const newStartTime = minutesToTime(rounded)
       const newEndTime = minutesToTime(rounded + DEFAULT_DURATION_MINUTES)
+      // Optimistically hide this chip from Inbox
+      setPendingScheduleIds((prev) => new Set(prev).add(activeTodo._id))
       // Check conflicts
       const todayTasks = todos
         .filter(t => t.scheduledDate && (t.scheduledDate.split('T')[0] === internalSelectedDate) && t.startTime && t.endTime)
@@ -428,6 +441,10 @@ export default function TimelineView({
           onTodoUpdate?.()
         } catch (error) {
           console.error('Failed to schedule todo:', error)
+          // Re-show in Inbox if failed
+          setPendingScheduleIds((prev) => {
+            const next = new Set(prev); next.delete(activeTodo._id); return next
+          })
         }
       }
       setActiveId(null)
@@ -591,10 +608,10 @@ export default function TimelineView({
           </DragOverlay>
            {/* Inbox of unscheduled todos */}
            {(() => {
-             const unscheduled = todos.filter((t) => !t.scheduledDate)
+             const unscheduled = todos.filter((t) => !t.scheduledDate && !pendingScheduleIds.has(t._id))
              if (unscheduled.length === 0) return null
              return (
-               <div className="border-b border-gray-200 bg-white/90 px-3 py-2.5">
+               <div className="border-b-3 border-black bg-white/90 px-3 py-2.5">
                  <div className="flex items-center justify-between mb-2">
                    <div className="flex items-center gap-2">
                      <span className="text-[12px] font-semibold text-gray-900">Inbox</span>
@@ -615,7 +632,7 @@ export default function TimelineView({
 
            <div ref={scrollRef} className="relative h-full w-full overflow-y-auto scrollbar-hide">
           {/* Full-day canvas */}
-          <div className="relative pt-6" style={{ height: 24 * HOUR_HEIGHT }}>
+          <div className={showHeader ? "relative pt-6" : "relative pt-2"} style={{ height: 24 * HOUR_HEIGHT }}>
             {/* Hour lines */}
             {timeLabels.map(({ minutes }, i) => (
               <div key={`h-${i}`} className="absolute inset-x-0 border-t border-gray-100" style={{ top: minutes * MINUTE_TO_PX }} />
@@ -635,7 +652,7 @@ export default function TimelineView({
             ))}
 
             {/* Left time rail (tight) */}
-            <div className="pointer-events-none absolute left-0 top-0" style={{ width: RAIL_WIDTH }}>
+            <div className="pointer-events-none absolute left-0 top-0" style={{ width: railWidth }}>
               {timeLabels.map(({ label, minutes }, i) => (
                 <div
                   key={`lbl-${i}`}
@@ -648,7 +665,7 @@ export default function TimelineView({
             </div>
 
             {/* Grid area (tasks) */}
-            <div className="absolute top-0" style={{ left: RAIL_WIDTH, right: 8 }}>
+            <div className="absolute top-0" style={{ left: railWidth, right: 8 }}>
               {/* Droppable time slots (every 5 minutes) */}
               {Array.from({ length: 288 }, (_, i) => i * 5).map((m) => (
                 <DroppableSlot key={m} id={`slot-${m}`} top={m * MINUTE_TO_PX} height={5 * MINUTE_TO_PX} />
@@ -660,9 +677,10 @@ export default function TimelineView({
                 const isToday = internalSelectedDate === today
 
                 // width/left for columns inside a narrow box (max 3)
-                const totalWidth = `calc(100% - ${(widthCols - 1) * COLUMN_GAP}px)`
+                const mobilePad = isMobile ? 6 : 0
+                const totalWidth = `calc(100% - ${(widthCols - 1) * COLUMN_GAP + mobilePad}px)`
                 const width = `calc(${totalWidth} / ${widthCols})`
-                const left = `calc((${width} + ${COLUMN_GAP}px) * ${col})`
+                const left = `calc((${width} + ${COLUMN_GAP}px) * ${col} + ${mobilePad}px)`
 
                 return (
                   <DraggableTimelineBlock
@@ -736,7 +754,7 @@ function InboxDraggable({ todo, colorMap, onPressStart, onPressEnd, isPressing }
   return (
     <div ref={setNodeRef} style={style} className={classes} onTouchStart={onPressStart} onTouchEnd={onPressEnd} onTouchCancel={onPressEnd} {...listeners} {...attributes}>
       <span className="truncate max-w-[160px]">{todo.title}</span>
-      <span className="text-[10px] text-gray-500">Drag to schedule</span>
+      
     </div>
   )
 }

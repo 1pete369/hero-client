@@ -36,6 +36,7 @@ import {
   type Goal as ApiGoal,
   type CreateGoalData,
 } from "@/services"
+import { isoDateOnly } from "@/lib/utils"
 
 type Goal = ApiGoal
 
@@ -56,6 +57,50 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
     category: "personal",
     priority: "medium" as "low" | "medium" | "high",
   })
+  const [durationPreset, setDurationPreset] = useState<"7"|"21"|"30"|"60"|"90"|"custom">("30")
+
+  // Helper to compute YYYY-MM-DD for inclusive durations (today counts as day 1)
+  const computeIsoFromPreset = (preset: "7"|"21"|"30"|"60"|"90") => {
+    const days = Number(preset) - 1
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+    return iso
+  }
+
+  // Ensure a valid targetDate when form opens on a preset (avoid empty date -> 500)
+  useEffect(() => {
+    if (showAddForm && !editingGoal) {
+      if (durationPreset !== "custom") {
+        const iso = computeIsoFromPreset(durationPreset)
+        if (formData.targetDate !== iso) {
+          setFormData({ ...formData, targetDate: iso })
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddForm, durationPreset])
+
+  // Ensure Add opens a fresh form and Edit only when explicitly set
+  useEffect(() => {
+    if (!showAddForm) {
+      // Delay clearing edit state until after close animation to prevent flicker
+      if (editingGoal) {
+        const timer = setTimeout(() => setEditingGoal(null), 220)
+        return () => clearTimeout(timer)
+      }
+    } else if (showAddForm && !editingGoal) {
+      // Opening for Add → reset form to defaults
+      setFormData({
+        title: "",
+        description: "",
+        targetDate: durationPreset !== "custom" ? computeIsoFromPreset(durationPreset) : "",
+        category: "personal",
+        priority: "medium",
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddForm])
 
   // Load goals on mount
   useEffect(() => {
@@ -78,12 +123,22 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Guarantee targetDate is populated from preset if using presets
+    let payloadTargetDate = formData.targetDate
+    if (durationPreset !== "custom") {
+      payloadTargetDate = computeIsoFromPreset(durationPreset)
+    }
+    if (!payloadTargetDate) {
+      toast.error("Please select a target date or duration")
+      return
+    }
+
     if (editingGoal) {
       try {
         const updated = await updateGoal(editingGoal._id, {
           title: formData.title,
           description: formData.description,
-          targetDate: formData.targetDate,
+          targetDate: payloadTargetDate,
           category: formData.category,
           priority: formData.priority,
         })
@@ -99,7 +154,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
         const payload: CreateGoalData = {
           title: formData.title,
           description: formData.description,
-          targetDate: formData.targetDate,
+          targetDate: payloadTargetDate,
           category: formData.category,
           priority: formData.priority,
         }
@@ -139,10 +194,24 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
     setFormData({
       title: goal.title,
       description: goal.description,
-      targetDate: goal.targetDate,
+      targetDate: isoDateOnly(goal.targetDate),
       category: goal.category,
       priority: goal.priority || "medium",
     })
+    // Set preset based on difference from today using inclusive model (N = diff + 1); fallback to custom
+    try {
+      const today = new Date()
+      const tgt = new Date(goal.targetDate)
+      const t0 = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+      const t1 = Date.UTC(tgt.getFullYear(), tgt.getMonth(), tgt.getDate())
+      const rawDays = Math.round((t1 - t0) / (1000*60*60*24))
+      const candidate = rawDays + 1
+      const presets = [7,21,30,60,90]
+      if (presets.includes(candidate as any)) setDurationPreset(String(candidate) as any)
+      else setDurationPreset("custom")
+    } catch {
+      setDurationPreset("custom")
+    }
     setShowAddForm(true)
   }
 
@@ -210,7 +279,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
     <div className="space-y-6">
       {/* Add/Edit Form Dialog */}
       <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg border-solid border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">
               {editingGoal ? "Edit Goal" : "Create New Goal"}
@@ -229,11 +298,12 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                 }
                 placeholder="Enter your goal"
                 required
+                className="border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus-visible:outline-none focus:outline-none"
               />
             </div>
 
-            {/* Category and Target Date Row */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Category and Duration Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select
@@ -242,7 +312,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                     setFormData({ ...formData, category: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -254,16 +324,47 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="targetDate">Target Date</Label>
-                <Input
-                  id="targetDate"
-                  type="date"
-                  value={formData.targetDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, targetDate: e.target.value })
-                  }
-                  required
-                />
+                <Label>Duration</Label>
+                <Select
+                  value={durationPreset}
+                  onValueChange={(value) => {
+                    const preset = value as typeof durationPreset
+                    setDurationPreset(preset)
+                    const today = new Date()
+                    if (preset !== "custom") {
+                      const days = Number(preset) - 1
+                      const d = new Date(today)
+                      d.setDate(d.getDate() + days)
+                      const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                      setFormData({ ...formData, targetDate: iso })
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">7 days</SelectItem>
+                    <SelectItem value="21">21 days</SelectItem>
+                    <SelectItem value="30">30 days</SelectItem>
+                    <SelectItem value="60">60 days</SelectItem>
+                    <SelectItem value="90">90 days</SelectItem>
+                    <SelectItem value="custom">Custom date…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {durationPreset === "custom" && (
+                  <div className="space-y-2 mt-2">
+                    <Label htmlFor="targetDate">Target Date</Label>
+                    <Input
+                      id="targetDate"
+                      type="date"
+                      value={formData.targetDate}
+                      onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+                      required
+                      className="w-full border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus-visible:outline-none focus:outline-none"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -279,6 +380,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                 placeholder="Describe your goal in detail"
                 rows={3}
                 required
+                className="border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus-visible:outline-none focus:outline-none resize-none max-h-[96px] overflow-y-auto"
               />
             </div>
 
@@ -286,7 +388,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
             <div className="flex gap-3 pt-4">
               <Button
                 type="submit"
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
               >
                 {editingGoal ? "Update Goal" : "Create Goal"}
               </Button>
@@ -304,6 +406,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                     priority: "medium",
                   })
                 }}
+                className="flex-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
               >
                 Cancel
               </Button>
@@ -380,11 +483,11 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="rounded border-solid border-3 border-black bg-white shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
                       <DropdownMenuItem 
                         onClick={() => handleEdit(goal)}
                         disabled={goal.status === "completed" && !!goal.targetDate && new Date(goal.targetDate) < new Date()}
-                        className={goal.status === "completed" && goal.targetDate && new Date(goal.targetDate) < new Date() ? "opacity-50 cursor-not-allowed" : ""}
+                        className={(goal.status === "completed" && goal.targetDate && new Date(goal.targetDate) < new Date()) ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-50"}
                       >
                         <Edit className="mr-2 h-4 w-4" />
                         {goal.status === "completed" && goal.targetDate && new Date(goal.targetDate) < new Date() ? "Edit (Expired)" : "Edit"}

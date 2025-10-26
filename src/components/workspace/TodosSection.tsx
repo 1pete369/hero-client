@@ -317,6 +317,32 @@ export default function TodosSection({
     }
   }, [showTodoForm, editingTodo])
 
+  // Keep edit content during close animation; ensure Add opens fresh create form
+  useEffect(() => {
+    if (!showTodoForm) {
+      if (editingTodo) {
+        const timer = setTimeout(() => setEditingTodo(null), 220)
+        return () => clearTimeout(timer)
+      }
+    } else if (showTodoForm && !editingTodo) {
+      setFormData({
+        title: "",
+        description: "",
+        priority: "medium" as "low" | "medium" | "high",
+        dueDate: getTodayISO(),
+        category: "personal",
+        startTime: "09:00",
+        endTime: "10:00",
+        icon: "⚙️",
+        recurring: "none" as "none" | "daily" | "weekly" | "monthly",
+        days: [],
+        color: getRandomTodoColor() as TodoColor,
+      })
+      setScheduleLater(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTodoForm])
+
   // Smart timer that updates exactly when todos start/end
   useEffect(() => {
     const updateTimer = () => {
@@ -1070,6 +1096,29 @@ export default function TodosSection({
         </DialogContent>
       </Dialog>
 
+      {/* Today header with Timeline when no scheduled todos */}
+      {onShowTimeline && filteredTodos.length === 0 && !showTodoForm && (
+        <div className="px-2 pb-2 lg:hidden">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-6 bg-indigo-600 rounded-full"></div>
+            <h3 className="text-sm font-medium text-gray-700">Today</h3>
+            <div className="flex-1 h-px bg-gray-200"></div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">0 tasks</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onShowTimeline}
+                className="text-xs h-7 px-3 bg-white text-gray-800 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]"
+              >
+                <Clock className="h-3 w-3 mr-1.5" />
+                Timeline
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Todos List */}
       {filteredTodos.length > 0 && (
@@ -1092,7 +1141,7 @@ export default function TodosSection({
                     variant="outline"
                     size="sm"
                     onClick={onShowTimeline}
-                    className="text-xs h-7 px-3 bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all duration-200 shadow-sm hover:shadow-md lg:hidden"
+                    className="lg:hidden text-xs h-7 px-3 bg-white text-gray-800 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]"
                   >
                     <Clock className="h-3 w-3 mr-1.5" />
                     Timeline

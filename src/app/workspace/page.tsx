@@ -195,7 +195,7 @@ function WorkspaceContent() {
 
             {showTimelineModal && (
               <div 
-                className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+                className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-200"
                 onClick={(e) => {
                   // Only close if clicking on the backdrop itself, not on child elements
                   if (e.target === e.currentTarget) {
@@ -275,7 +275,7 @@ function WorkspaceContent() {
       : "Evening"
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
+    <div className="h-screen flex overflow-hidden">
       <div className="flex flex-1 min-h-0">
         <Sidebar
           activeSection={activeSection}
@@ -291,10 +291,10 @@ function WorkspaceContent() {
           />
         )}
 
-        <main className="flex-1  h-full overflow-hidden">
+        <main className="flex-1  h-full overflow-hidden ">
           <div className="max-w-7xl mx-auto w-full h-full flex flex-col ">
-            <div className="mb-4 pr-2 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between w-full flex-shrink-0  border-b-3 border-black ">
-              <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0 p-2">
+            <div className="mb-4 flex flex-col  lg:flex-row lg:items-center lg:justify-between w-full flex-shrink-0  border-b-3 border-black  ">
+              <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0 p-2 ">
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">
                     {activeSection === "finance" ? "Finance" : 
@@ -319,7 +319,7 @@ function WorkspaceContent() {
                 </Button>
               </div>
 
-              <div className="flex items-start justify-between   sm:items-center gap-2 lg:gap-4 w-full lg:w-auto lg:justify-end">
+              <div className="flex items-start justify-between sm:items-center gap-2 lg:gap-4 w-full lg:w-auto lg:justify-end px-1 sm:pl-0 mt-0 mb-2 ">
                  {/* Filter Dropdown */}
                  {activeSection === "todos" && (
                   <DropdownMenu>
@@ -606,7 +606,7 @@ function WorkspaceContent() {
             else if (activeSection === "notes") router.push("/workspace?section=notes&noteAction=new")
           }}
           aria-label={`Add ${activeSection}`}
-          className="lg:hidden fixed bottom-5 right-5 z-50 rounded-full bg-white text-black border-solid border-3 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:ring-2 focus:ring-black/40 focus:ring-offset-2 w-14 h-14 flex items-center justify-center"
+          className="lg:hidden fixed bottom-5 right-5 z-50 rounded-full bg-white text-black border-solid border-3 border-black focus:outline-none focus:ring-0 w-14 h-14 flex items-center justify-center"
         >
           <Plus className="h-6 w-6" aria-hidden="true" />
         </button>

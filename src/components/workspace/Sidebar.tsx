@@ -109,22 +109,30 @@ export default function Sidebar({
         </div>
 
         <div className="p-4 border-t border-gray-200 space-y-2">
-          <Button variant="ghost" size="sm" className="w-full justify-start p-2 hover:bg-gray-100">
-            <Bell className="h-4 w-4 text-gray-600 mr-3" />
-            <span className="text-sm text-gray-700">Notifications</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full flex items-center justify-start gap-3 px-3 py-2 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
+          >
+            <Bell className="h-4 w-4 text-gray-600" />
+            <span className="text-sm font-medium text-gray-700">Notifications</span>
             <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">3</span>
           </Button>
 
-          <Button variant="ghost" size="sm" className="w-full justify-start p-2 hover:bg-gray-100">
-            <Settings className="h-4 w-4 text-gray-600 mr-3" />
-            <span className="text-sm text-gray-700">Settings</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full flex items-center justify-start gap-3 px-3 py-2 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
+          >
+            <Settings className="h-4 w-4 text-gray-600" />
+            <span className="text-sm font-medium text-gray-700">Settings</span>
           </Button>
 
           <div className="relative" ref={userMenuRef}>
             <Button
               variant="ghost"
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-full justify-start p-2 hover:bg-gray-100"
+              className="w-full flex items-center justify-start gap-3 px-3 py-2 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
             >
               <div className="mr-3">
                 <Avatar className="h-6 w-6">
@@ -134,21 +142,21 @@ export default function Sidebar({
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <span className="text-sm text-gray-700 font-medium truncate">
+              <span className="text-sm font-medium text-gray-700 truncate">
                 {authUser?.username || authUser?.email?.split("@")[0] || "User"}
               </span>
             </Button>
 
             {showUserMenu && (
-              <div className="absolute bottom-full left-0 mb-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              <div className="absolute bottom-full left-0 mb-2 w-full bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] py-2 z-50">
                 <button 
                   onClick={() => { router.push("/profile"); setShowUserMenu(false) }} 
-                  className="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-gray-50"
+                  className="w-full text-left px-4 py-2 border-b border-gray-200 hover:bg-indigo-50"
                 >
                   <p className="text-sm font-medium text-gray-900">{authUser?.email || "user@example.com"}</p>
                   <p className="text-xs text-gray-500">Free Trial</p>
                 </button>
-                <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+                <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 flex items-center space-x-2">
                   <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>
                 </button>
