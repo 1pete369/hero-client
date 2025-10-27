@@ -61,6 +61,8 @@ export default function FinanceSection({
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [filters, setFilters] = useState<TransactionFilters>({
     limit: 20,
     page: 1,
@@ -94,17 +96,17 @@ export default function FinanceSection({
 
   // Handle transaction deletion
   const handleDeleteTransaction = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this transaction?")) {
-      return;
-    }
-
     try {
+      setDeletingId(id);
       await financeService.deleteTransaction(id);
       toast.success("Transaction deleted successfully");
-      loadTransactions();
+      await loadTransactions();
     } catch (error: any) {
       console.error("Error deleting transaction:", error);
       toast.error("Failed to delete transaction");
+    } finally {
+      setDeletingId(null);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -174,18 +176,25 @@ export default function FinanceSection({
 
   const netIncome = totals.income - totals.expense;
 
+  // Category options based on selected type filter
+  const getCategoryOptions = () => {
+    if (filters.type === "income") return ALL_CATEGORIES.income
+    if (filters.type === "expense") return ALL_CATEGORIES.expense
+    return [...ALL_CATEGORIES.income, ...ALL_CATEGORIES.expense]
+  }
+
   return (
-    <div className="h-full flex flex-col scrollbar-hide">
+    <div className="h-full flex flex-col scrollbar-hide pl-2 pr-3">
       {/* Content Area */}
       {viewMode === "dashboard" ? (
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-2">
           <FinanceDashboard timeRange={timeRange} />
         </div>
       ) : (
         <>
           {/* Summary Cards */}
-       <div className="flex gap-1 mb-1 lg:gap-4 lg:mb-6">
-         <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+      <div className="flex gap-1 mb-1 lg:gap-4 lg:mb-3">
+        <div className="flex-1 bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-2 lg:p-4">
            <div className="flex items-center gap-2 mb-1 lg:mb-2">
              <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4 text-green-600" />
              <span className="text-xs lg:text-sm font-bold text-gray-700">Income</span>
@@ -195,7 +204,7 @@ export default function FinanceSection({
               </div>
             </div>
 
-         <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+        <div className="flex-1 bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-2 lg:p-4">
            <div className="flex items-center gap-2 mb-1 lg:mb-2">
              <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4 text-red-600" />
              <span className="text-xs lg:text-sm font-bold text-gray-700">Expenses</span>
@@ -205,7 +214,7 @@ export default function FinanceSection({
            </div>
             </div>
 
-         <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+        <div className="flex-1 bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-2 lg:p-4">
            <div className="flex items-center gap-2 mb-1 lg:mb-2">
              <DollarSign className="h-3 w-3 lg:h-4 lg:w-4 text-blue-600" />
              <span className="text-xs lg:text-sm font-bold text-gray-700">Net</span>
@@ -224,16 +233,19 @@ export default function FinanceSection({
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-7 h-10 text-sm border border-gray-200 shadow-none bg-white focus:border-gray-200 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="pl-7 h-10 text-sm bg-white border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:ring-0 focus-visible:ring-0"
               />
             </div>
 
         <div className="flex gap-2 items-center">
           <Select
             value={filters.type || "all"}
-            onValueChange={(value) => handleFilterChange("type", value === "all" ? undefined : value)}
+            onValueChange={(value) => {
+              const nextType = (value === "all" ? undefined : (value as "income" | "expense"))
+              setFilters(prev => ({ ...prev, type: nextType, category: undefined, page: 1 }))
+            }}
           >
-            <SelectTrigger className="w-32 text-sm border border-gray-200 shadow-none bg-white" style={{ height: '40px' }}>
+            <SelectTrigger className="w-32 h-10 text-sm border-3 border-black rounded bg-white shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
@@ -247,17 +259,12 @@ export default function FinanceSection({
             value={filters.category || "all"}
             onValueChange={(value) => handleFilterChange("category", value === "all" ? undefined : value)}
           >
-            <SelectTrigger className="w-36 text-sm border border-gray-200 shadow-none bg-white" style={{ height: '40px' }}>
+            <SelectTrigger className="w-36 h-10 text-sm border-3 border-black rounded bg-white shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {ALL_CATEGORIES.income.map((category) => (
-                <SelectItem key={category.value} value={category.value}>
-                  {category.label}
-                </SelectItem>
-              ))}
-              {ALL_CATEGORIES.expense.map((category) => (
+              {getCategoryOptions().map((category) => (
                 <SelectItem key={category.value} value={category.value}>
                   {category.label}
                 </SelectItem>
@@ -289,8 +296,8 @@ export default function FinanceSection({
               {/* Transactions for this date */}
               <div className="space-y-2">
                 {dateTransactions.map((transaction) => (
-                  <Card key={transaction._id} className="border border-gray-200 shadow-none transition-all">
-                    <CardContent className="p-4">
+                  <Card key={transaction._id} className="rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all bg-white">
+                    <CardContent className="p-3 sm:p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className={`p-2 rounded-full ${
@@ -356,7 +363,7 @@ export default function FinanceSection({
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" className="rounded border-3 border-black bg-white shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
                               <DropdownMenuItem
                                 onClick={() => {
                                   setEditingTransaction(transaction);
@@ -367,7 +374,7 @@ export default function FinanceSection({
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => handleDeleteTransaction(transaction._id)}
+                                onClick={() => setDeleteConfirmId(transaction._id)}
                                 className="text-red-600"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
@@ -410,6 +417,21 @@ export default function FinanceSection({
         transaction={editingTransaction}
         onSuccess={loadTransactions}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <div className={`${deleteConfirmId ? 'fixed' : 'hidden'} inset-0 z-50 flex items-center justify-center p-4 bg-black/30`}
+        onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirmId(null) }}>
+        <div className="bg-white max-w-sm w-full rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-4">
+          <h3 className="text-lg font-semibold mb-2">Delete transaction?</h3>
+          <p className="text-sm text-gray-700 mb-3">This action cannot be undone.</p>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+            <Button className="flex-1 bg-red-600 hover:bg-red-700 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]" disabled={Boolean(deletingId)} onClick={() => deleteConfirmId && handleDeleteTransaction(deleteConfirmId)}>
+              {deletingId ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

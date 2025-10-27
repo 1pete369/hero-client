@@ -50,11 +50,10 @@ export default function Sidebar({
   }
   const menuItems = [
     { id: "todos", title: "Todos", icon: "📝", description: "Manage your daily tasks and priorities" },
-    { id: "calendar", title: "Calendar", icon: "📅", description: "View your tasks on a calendar" },
     { id: "goals", title: "Goals", icon: "🎯", description: "Set and track your long-term objectives" },
     { id: "habits", title: "Habits", icon: "🔄", description: "Build and maintain positive routines" },
     { id: "finance", title: "Finance", icon: "💰", description: "Track income, expenses, and financial goals" },
-    { id: "notes", title: "Notes", icon: "📔", description: "Capture ideas and important information" },
+    { id: "notes", title: "Notes", icon: "📒", description: "Capture ideas and information" },
   ]
 
   return (

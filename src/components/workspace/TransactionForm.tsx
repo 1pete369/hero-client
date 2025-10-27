@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import {
   Dialog,
   DialogContent,
@@ -88,10 +89,11 @@ export default function TransactionForm({
       });
     } else {
       // Reset form for new transaction
+      const defaultCategory = (ALL_CATEGORIES.expense[0]?.value) || ""
       setFormData({
         type: "expense",
         amount: 0,
-        category: "",
+        category: defaultCategory,
         description: "",
         date: getTodayLocal(),
         tags: [],
@@ -206,11 +208,14 @@ export default function TransactionForm({
       : ALL_CATEGORIES.expense;
   };
 
+  const getCategoriesForType = (t: "income" | "expense") =>
+    t === "income" ? ALL_CATEGORIES.income : ALL_CATEGORIES.expense
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
         <DialogHeader>
-          <DialogTitle className="text-lg">
+          <DialogTitle className="text-lg font-semibold">
             {transaction ? "Edit Transaction" : "Add Transaction"}
           </DialogTitle>
         </DialogHeader>
@@ -222,9 +227,16 @@ export default function TransactionForm({
               <Label className="text-sm">Type</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value: "income" | "expense") => handleInputChange("type", value)}
+                onValueChange={(value: "income" | "expense") => {
+                  const nextCats = getCategoriesForType(value)
+                  const currentValid = nextCats.some(c => c.value === formData.category)
+                  const nextCategory = currentValid ? formData.category : (nextCats[0]?.value || "")
+                  setFormData(prev => ({ ...prev, type: value, category: nextCategory }))
+                  if (errors.type) setErrors(prev => ({ ...prev, type: "" }))
+                  if (errors.category) setErrors(prev => ({ ...prev, category: "" }))
+                }}
               >
-                <SelectTrigger className={errors.type ? "border-red-500" : ""}>
+                <SelectTrigger className={`border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] ${errors.type ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -244,21 +256,21 @@ export default function TransactionForm({
                 value={formData.amount || ""}
                 onChange={(e) => handleInputChange("amount", parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
-                className={errors.amount ? "border-red-500" : ""}
+                className={`border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] ${errors.amount ? 'border-red-500' : ''}`}
               />
               {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
             </div>
           </div>
 
-          {/* Category and Date Row */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Category */}
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1">
               <Label className="text-sm">Category</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value) => handleInputChange("category", value)}
               >
-                <SelectTrigger className={errors.category ? "border-red-500" : ""}>
+                <SelectTrigger className={`border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] ${errors.category ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -271,17 +283,6 @@ export default function TransactionForm({
               </Select>
               {errors.category && <p className="text-xs text-red-500">{errors.category}</p>}
             </div>
-
-            <div className="space-y-1">
-              <Label className="text-sm">Date</Label>
-              <Input
-                type="date"
-                value={formData.date}
-                onChange={(e) => handleInputChange("date", e.target.value)}
-                className={errors.date ? "border-red-500" : ""}
-              />
-              {errors.date && <p className="text-xs text-red-500">{errors.date}</p>}
-            </div>
           </div>
 
           {/* Description */}
@@ -291,74 +292,94 @@ export default function TransactionForm({
               value={formData.description}
               onChange={(e) => handleInputChange("description", e.target.value)}
               placeholder="Enter description"
-              className={errors.description ? "border-red-500" : ""}
+              className={`border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] ${errors.description ? 'border-red-500' : ''}`}
             />
             {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
           </div>
 
-          {/* Tags */}
-          <div className="space-y-2">
-            <Label className="text-sm">Tags (Optional)</Label>
-            <div className="flex gap-2">
-              <Input
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Add tag"
-                maxLength={20}
-                className="text-sm"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddTag}
-                disabled={!tagInput.trim() || (formData.tags?.length || 0) >= 3}
-              >
-                Add
-              </Button>
-            </div>
-            {(formData.tags?.length || 0) > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {(formData.tags || []).map((tag, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="flex items-center gap-1 text-xs"
-                  >
-                    {tag}
-                    <button
+          {/* Advanced */}
+          <Accordion type="single" collapsible>
+            <AccordionItem value="advanced">
+              <AccordionTrigger>Advanced settings</AccordionTrigger>
+              <AccordionContent>
+                {/* Date */}
+                <div className="space-y-1 mb-3">
+                  <Label className="text-sm">Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => handleInputChange("date", e.target.value)}
+                    className={`border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] ${errors.date ? 'border-red-500' : ''}`}
+                  />
+                  {errors.date && <p className="text-xs text-red-500">{errors.date}</p>}
+                </div>
+                {/* Tags */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Tags (Optional)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Add tag"
+                      maxLength={20}
+                      className="text-sm border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+                    />
+                    <Button
                       type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="ml-1 hover:text-red-500"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddTag}
+                      disabled={!tagInput.trim() || (formData.tags?.length || 0) >= 3}
+                      className="border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]"
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
+                      Add
+                    </Button>
+                  </div>
+                  {(formData.tags?.length || 0) > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {(formData.tags || []).map((tag, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="flex items-center gap-1 text-xs border-3 border-black"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTag(tag)}
+                            className="ml-1 hover:text-red-500"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-          {/* Notes */}
-          <div className="space-y-1">
-            <Label className="text-sm">Notes (Optional)</Label>
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => handleInputChange("notes", e.target.value)}
-              placeholder="Add notes..."
-              rows={3}
-              maxLength={200}
-              className="text-sm"
-            />
-          </div>
+                {/* Notes */}
+                <div className="space-y-1 mt-3">
+                  <Label className="text-sm">Notes (Optional)</Label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange("notes", e.target.value)}
+                    placeholder="Add notes..."
+                    rows={3}
+                    maxLength={200}
+                    className="text-sm border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-3">
             <Button
               type="submit"
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
               size="sm"
             >
               {isLoading ? "Saving..." : transaction ? "Update" : "Create"}
@@ -369,6 +390,7 @@ export default function TransactionForm({
               onClick={onClose}
               disabled={isLoading}
               size="sm"
+              className="flex-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
             >
               Cancel
             </Button>

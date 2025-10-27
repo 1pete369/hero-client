@@ -27,13 +27,10 @@ import type { Todo } from "@/services"
 import CalendarSection from "@/components/workspace/CalendarSection"
 import GoalsSection from "@/components/workspace/GoalsSection"
 import HabitsSection from "@/components/workspace/HabitsSection"
-import NotesSection from "@/components/workspace/NotesSection"
-// Journals feature removed
+import NotesFeature from "@/components/workspace/NotesFeature"
 import FinanceSection from "@/components/workspace/FinanceSection"
 import TimelineView from "@/components/workspace/TimelineView"
-import NewNotePage from "@/components/workspace/NewNotePage"
-import EditNotePage from "@/components/workspace/EditNotePage"
-import ViewNotePage from "@/components/workspace/ViewNotePage"
+// Note pages removed
 
 type FilterKey = "all" | "pending" | "completed" | "upcoming" | "past"
 
@@ -235,22 +232,14 @@ function WorkspaceContent() {
             )}
           </div>
         )
-      case "calendar":
-        return <CalendarSection currentDate={calendarCurrentDate} onDateChange={setCalendarCurrentDate} />
+      // case "calendar":
+      //   return <CalendarSection currentDate={calendarCurrentDate} onDateChange={setCalendarCurrentDate} />
       case "goals":
         return <GoalsSection showAddForm={showGoalsForm} setShowAddForm={setShowGoalsForm} />
       case "habits":
         return <HabitsSection showAddForm={showHabitsForm} setShowAddForm={setShowHabitsForm} />
       case "notes":
-        if (isNewNotePage) {
-          return <NewNotePage />
-        } else if (isEditNotePage) {
-          return <EditNotePage />
-        } else if (isViewNotePage) {
-          return <ViewNotePage />
-        } else {
-          return <NotesSection />
-        }
+        return <NotesFeature />
       // case "journals":
       //   return <JournalsSection />
       case "finance":
@@ -296,17 +285,9 @@ function WorkspaceContent() {
             <div className="mb-4 flex flex-col  lg:flex-row lg:items-center lg:justify-between w-full flex-shrink-0  border-b-3 border-black  ">
               <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0 p-2 ">
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">
-                    {activeSection === "finance" ? "Finance" : 
-                     activeSection === "notes" ? "Notes" : `Good ${greeting}!`}
-                  </h1>
+                  <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">{activeSection === "finance" ? "Finance" : `Good ${greeting}!`}</h1>
                   <p className="text-gray-600 text-xs truncate">
-                    {activeSection === "finance" 
-                      ? "Track your income and expenses" 
-                      : activeSection === "notes"
-                      ? "Capture ideas, insights, and important information"
-                      : "Manage your daily tasks and priorities"
-                    }
+                    {activeSection === "finance" ? "Track your income and expenses" : "Manage your daily tasks and priorities"}
                   </p>
                 </div>
                 <Button
@@ -388,31 +369,27 @@ function WorkspaceContent() {
                 {/* Finance View Toggle */}
                 {activeSection === "finance" && (
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-indigo-100 rounded-lg p-1">
-                      <Button
-                        variant={financeViewMode === "list" ? "default" : "ghost"}
-                        size="sm"
+                    <div className="flex items-center rounded border-3 border-black bg-white shadow-[4px_4px_0_0_rgba(0,0,0,1)] overflow-hidden">
+                      <button
                         onClick={() => setFinanceViewMode("list")}
-                        className={`px-3 text-xs ${
-                          financeViewMode === "list" 
-                            ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
-                            : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                        className={`px-3 h-8 text-xs border-r-3 border-black transition-transform ${
+                          financeViewMode === "list"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-indigo-700 hover:bg-indigo-50"
                         }`}
                       >
                         List
-                      </Button>
-                      <Button
-                        variant={financeViewMode === "dashboard" ? "default" : "ghost"}
-                        size="sm"
+                      </button>
+                      <button
                         onClick={() => setFinanceViewMode("dashboard")}
-                        className={`px-3 text-xs ${
-                          financeViewMode === "dashboard" 
-                            ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
-                            : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                        className={`px-3 h-8 text-xs transition-transform ${
+                          financeViewMode === "dashboard"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-indigo-700 hover:bg-indigo-50"
                         }`}
                       >
                         Dashboard
-                      </Button>
+                      </button>
                     </div>
                     
                     {/* Time Range Selector - only show in dashboard mode */}
@@ -546,27 +523,7 @@ function WorkspaceContent() {
                   </>
                 )}
 
-                {/* Calendar Navigation - only show when calendar is active */}
-                {activeSection === "calendar" && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold text-gray-900">
-                        {calendarCurrentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                      </h2>
-                      <Button onClick={goToToday} variant="outline" size="sm" className="h-8 px-2 text-xs">
-                        Today
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button onClick={goToPreviousMonth} variant="outline" size="sm" className="h-8 w-8 p-0">
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button onClick={goToNextMonth} variant="outline" size="sm" className="h-8 w-8 p-0">
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                {/* Calendar Navigation hidden */}
 
                 {/* Desktop Add button (hidden on mobile) */}
                 {activeSection !== "calendar" && (
@@ -576,7 +533,12 @@ function WorkspaceContent() {
                       else if (activeSection === "finance") setShowFinanceForm(true)
                       else if (activeSection === "goals") setShowGoalsForm(true)
                       else if (activeSection === "habits") setShowHabitsForm(true)
-                      else if (activeSection === "notes") router.push("/workspace?section=notes&noteAction=new")
+                      else if (activeSection === "notes") {
+                        router.push("/workspace?section=notes&noteAction=new")
+                      } else {
+                        setActiveSection("notes")
+                        router.push("/workspace?section=notes&noteAction=new")
+                      }
                     }}
                     variant="outline"
                     className="hidden lg:inline-flex text-black bg-white rounded border-solid border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
@@ -603,7 +565,12 @@ function WorkspaceContent() {
             } else if (activeSection === "finance") setShowFinanceForm(true)
             else if (activeSection === "goals") setShowGoalsForm(true)
             else if (activeSection === "habits") setShowHabitsForm(true)
-            else if (activeSection === "notes") router.push("/workspace?section=notes&noteAction=new")
+            else if (activeSection === "notes") {
+              router.push("/workspace?section=notes&noteAction=new")
+            } else {
+              setActiveSection("notes")
+              router.push("/workspace?section=notes&noteAction=new")
+            }
           }}
           aria-label={`Add ${activeSection}`}
           className="lg:hidden fixed bottom-5 right-5 z-50 rounded-full bg-white text-black border-solid border-3 border-black focus:outline-none focus:ring-0 w-14 h-14 flex items-center justify-center"

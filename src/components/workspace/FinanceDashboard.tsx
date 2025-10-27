@@ -207,10 +207,10 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
   const netChange = 15.7;
 
   return (
-    <div className={`space-y-6 scrollbar-hide ${className}`}>
+    <div className={`space-y-6 scrollbar-hide  ${className}`}>
       {/* Summary Cards */}
       <div className="flex gap-1 mb-1 lg:gap-4 lg:mb-6">
-        <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+        <div className="flex-1 bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-2 lg:p-4">
           <div className="flex items-center gap-2 mb-1 lg:mb-2">
             <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4 text-green-600" />
             <span className="text-xs lg:text-sm font-bold text-gray-700">Income</span>
@@ -220,7 +220,7 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
           </div>
         </div>
 
-        <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+        <div className="flex-1 bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-2 lg:p-4">
           <div className="flex items-center gap-2 mb-1 lg:mb-2">
             <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4 text-red-600" />
             <span className="text-xs lg:text-sm font-bold text-gray-700">Expenses</span>
@@ -230,7 +230,7 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
           </div>
         </div>
 
-        <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 lg:p-4">
+        <div className="flex-1 bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-2 lg:p-4">
           <div className="flex items-center gap-2 mb-1 lg:mb-2">
             <DollarSign className="h-3 w-3 lg:h-4 lg:w-4 text-blue-600" />
             <span className="text-xs lg:text-sm font-bold text-gray-700">Net</span>
@@ -244,7 +244,7 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
       {/* Charts Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Weekly Expenses Line Chart */}
-        <div className="bg-white border border-gray-200 rounded-lg p-3 md:col-span-2 lg:col-span-1">
+        <div className="bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-3 md:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <TrendingDown className="h-4 w-4 text-gray-600" />
@@ -253,13 +253,13 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
             <div className="flex items-center gap-1">
               <button 
                 onClick={handlePreviousWeek}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-1 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
               >
                 <ChevronLeft className="h-4 w-4 text-gray-600" />
               </button>
               <button 
                 onClick={handleNextWeek}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-1 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
               >
                 <ChevronRight className="h-4 w-4 text-gray-600" />
               </button>
@@ -304,7 +304,7 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
         </div>
 
         {/* Income vs Expenses Pie Chart */}
-        <div className="bg-white border border-gray-200 rounded-lg p-3 lg:p-4">
+        <div className="bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-3 lg:p-4">
           <div className="flex items-center gap-2 mb-4">
             <PieChart className="h-5 w-5 text-gray-600" />
             <h3 className="text-lg font-semibold text-gray-900">Income vs Expenses</h3>
@@ -353,7 +353,7 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
         </div>
 
         {/* Category Breakdown */}
-        <div className="bg-white border border-gray-200 rounded-lg p-3 hover:!bg-white md:col-span-2 lg:col-span-1">
+        <div className="bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-3 hover:!bg-white md:col-span-2 lg:col-span-1">
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="h-4 w-4 text-gray-600" />
             <h3 className="text-base font-semibold text-gray-900">Top Categories</h3>
@@ -412,7 +412,7 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
       </div>
 
       {/* Recent Transactions */}
-      <div className="bg-white border border-gray-200 rounded-lg p-3 lg:p-4">
+      <div className="bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-3 lg:p-4">
         <div className="flex items-center gap-2 mb-4">
           <Calendar className="h-5 w-5 text-gray-600" />
           <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
@@ -422,7 +422,7 @@ export default function FinanceDashboard({ className, timeRange }: FinanceDashbo
             {recentTransactions.map((transaction) => (
               <div
                 key={transaction._id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-3 bg-gray-50 rounded border-3 border-black"
               >
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-full ${
