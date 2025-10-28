@@ -16,7 +16,15 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-6 pt-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-gray-400 text-sm">© {currentYear} GrindFlow. All rights reserved.</div>
-            <div className="text-gray-400 text-sm" />
+            <div className="text-gray-400 text-sm">
+              <div className="flex flex-wrap items-center gap-4">
+                <Link href="/privacy" className="hover:text-white">Privacy</Link>
+                <Link href="/terms-and-conditions" className="hover:text-white">Terms</Link>
+                <Link href="/refund" className="hover:text-white">Cancellation & Refunds</Link>
+                <Link href="/contact" className="hover:text-white">Contact</Link>
+                <Link href="/shipping" className="hover:text-white">Shipping</Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
