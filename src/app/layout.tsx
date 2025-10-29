@@ -4,6 +4,15 @@ import Navbar from "@/components/Navbar";
 import { AuthProvider } from "../context/useAuthContext";
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
+import { Comic_Neue } from "next/font/google";
+
+const comicNeue = Comic_Neue({ 
+  weight: ['300', '400', '700'],
+  style: ['normal', 'italic'],
+  subsets: ['latin'],
+  display: 'swap',
+  fallback: ['system-ui', 'arial', 'sans-serif']
+});
 
 export const metadata: Metadata = { title: "Auth App", description: "Minimal auth demo" };
 
@@ -16,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* LaunchList referral tracking */}
         <Script src="https://getlaunchlist.com/js/widget-diy.js" strategy="afterInteractive" />
       </head>
-      <body>
+      <body className={comicNeue.className}>
         <AuthProvider>
           <Navbar />
           {children}
