@@ -184,7 +184,8 @@ const COLOR_BLOCK: Record<string, string> = {
 const DEFAULT_DURATION_MINUTES = 30
 
 /* ------------ Helpers ------------ */
-const timeToMinutes = (t: string) => {
+const timeToMinutes = (t: string | null | undefined) => {
+  if (!t) return 0
   const [h, m] = t.split(":").map(Number)
   return h * 60 + (m || 0)
 }
@@ -416,8 +417,8 @@ export default function TimelineView({
     // Reset pressing state when drag ends
     setIsPressing(null)
     
-    // If dropped onto a timeline slot AND the task is unscheduled, create schedule with default duration
-    if (activeTodo && !activeTodo.scheduledDate && over && typeof over.id === 'string' && over.id.toString().startsWith('slot-')) {
+    // If dropped onto a timeline slot AND the task has no time blocks yet, create schedule with default duration
+    if (activeTodo && (!activeTodo.startTime || !activeTodo.endTime) && over && typeof over.id === 'string' && over.id.toString().startsWith('slot-')) {
       suppressAutoScrollRef.current = true
       const minute = parseInt(over.id.toString().replace('slot-',''), 10)
       const rounded = Math.max(0, Math.min(1440 - DEFAULT_DURATION_MINUTES, Math.round(minute / 5) * 5))
@@ -463,8 +464,10 @@ export default function TimelineView({
     suppressAutoScrollRef.current = true
     // Calculate new time based on drag distance
     const deltaMinutes = Math.round(delta.y / MINUTE_TO_PX)
-    const originalStartMinutes = timeToMinutes(activeTodo.startTime as string)
-    const originalEndMinutes = timeToMinutes(activeTodo.endTime as string)
+    
+    // If todo doesn't have time blocks yet (from inbox), use default values
+    const originalStartMinutes = activeTodo.startTime ? timeToMinutes(activeTodo.startTime) : 0
+    const originalEndMinutes = activeTodo.endTime ? timeToMinutes(activeTodo.endTime) : DEFAULT_DURATION_MINUTES
     const duration = originalEndMinutes - originalStartMinutes
 
     // Snap to 5-minute grid, but preserve duration near day end by clamping start
@@ -586,7 +589,7 @@ export default function TimelineView({
          >
           {/* Global drag overlay so items remain visible across containers */}
           <DragOverlay dropAnimation={null}>
-            {activeTodo && !activeTodo.scheduledDate ? (
+            {activeTodo && (!activeTodo.startTime || !activeTodo.endTime) ? (
               <div className="pointer-events-none z-50">
                 {(() => {
                   const colorKey = (activeTodo.color ?? 'blue') as string
