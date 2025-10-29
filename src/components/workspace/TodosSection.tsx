@@ -486,9 +486,10 @@ export default function TodosSection({
           title: formData.title,
           description: "",
           priority: formData.priority,
-          dueDate: scheduleLater ? null : formData.dueDate,
+          // Save date only if: (1) scheduleLater is OFF, OR (2) date was explicitly changed from default
+          dueDate: scheduleLater && formData.dueDate === getTodayISO() ? null : formData.dueDate,
           category: formData.category,
-          startTime: scheduleLater ? null : formData.startTime,
+          startTime: scheduleLater ? null : formData.startTime, // Only skip time if scheduling later
           endTime: scheduleLater ? null : formData.endTime,
           icon: formData.icon,
           recurring: formData.recurring,
@@ -508,9 +509,10 @@ export default function TodosSection({
           title: formData.title,
           description: "",
           priority: formData.priority,
-          dueDate: scheduleLater ? null : formData.dueDate,
+          // Save date only if: (1) scheduleLater is OFF, OR (2) date was explicitly changed from default
+          dueDate: scheduleLater && formData.dueDate === getTodayISO() ? null : formData.dueDate,
           category: formData.category,
-          startTime: scheduleLater ? null : formData.startTime,
+          startTime: scheduleLater ? null : formData.startTime, // Only skip time if scheduling later
           endTime: scheduleLater ? null : formData.endTime,
           icon: formData.icon,
           recurring: formData.recurring,
