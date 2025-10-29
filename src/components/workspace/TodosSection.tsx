@@ -438,9 +438,15 @@ export default function TodosSection({
     }
 
     try {
+      // Validate date is not in the past
+      if (formData.dueDate && formData.dueDate < getTodayISO()) {
+        toast.error("Cannot create todos for past dates. Please select today or a future date.")
+        return
+      }
+      
       if (!scheduleLater) {
-        if (!formData.dueDate || formData.dueDate < getTodayISO()) {
-          toast.error("Date must be today or a future date.")
+        if (!formData.dueDate) {
+          toast.error("Date must be selected.")
           return
         }
       }
@@ -1022,6 +1028,7 @@ export default function TodosSection({
                             id="dueDate"
                             type="date"
                             value={formData.dueDate}
+                            min={getTodayISO()}
                             onChange={(e) => {
                               setFormData({ ...formData, dueDate: e.target.value })
                             }}
