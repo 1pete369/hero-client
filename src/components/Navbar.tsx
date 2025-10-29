@@ -54,12 +54,14 @@ export default function Navbar() {
     <div className="sticky top-0 z-50 bg-white">
       <div className="flex justify-between items-center h-16 md:h-20 w-full px-4 md:px-6 py-3 border-3 border-black bg-white shadow-[4px_4px_0_0_#000]">
         {/* Left Section - Branding and Offer */}
+          <Link href={"/"}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-700 rounded-lg flex items-center justify-center border-3 border-black shadow-[3px_3px_0_0_#000]">
             <span className="text-white font-bold text-lg">GF</span>
           </div>
-          <span className="text-gray-900 font-bold text-xl">GrindFlow</span>
+          <span className="text-gray-900 font-bold text-xl">GrindFlowClub</span>
         </div>
+          </Link>
 
         {/* Mobile Menu */}
         <Sheet>

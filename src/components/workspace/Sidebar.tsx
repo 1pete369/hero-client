@@ -111,7 +111,7 @@ export default function Sidebar({
           <Button
             variant="ghost"
             size="sm"
-            className="w-full flex items-center justify-start gap-3 px-3 py-2 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
+            className="w-full flex items-center justify-start gap-3 px-3 py-4 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
           >
             <Bell className="h-4 w-4 text-gray-600" />
             <span className="text-sm font-medium text-gray-700">Notifications</span>
@@ -121,7 +121,7 @@ export default function Sidebar({
           <Button
             variant="ghost"
             size="sm"
-            className="w-full flex items-center justify-start gap-3 px-3 py-2 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
+            className="w-full flex items-center justify-start gap-3 px-3 py-4 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
           >
             <Settings className="h-4 w-4 text-gray-600" />
             <span className="text-sm font-medium text-gray-700">Settings</span>
@@ -133,7 +133,7 @@ export default function Sidebar({
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="w-full flex items-center justify-start gap-3 px-3 py-2 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
             >
-              <div className="mr-3">
+              <div className="">
                 <Avatar className="h-6 w-6">
                   <AvatarImage src={authUser?.profilePic || ""} alt={authUser?.fullName || "User"} />
                   <AvatarFallback className="bg-indigo-100 text-indigo-700 text-xs">
@@ -149,7 +149,7 @@ export default function Sidebar({
             {showUserMenu && (
               <div className="absolute bottom-full left-0 mb-2 w-full bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] py-2 z-50">
                 <button 
-                  onClick={() => { router.push("/profile"); setShowUserMenu(false) }} 
+                  onClick={() => { router.push("/dashboard"); setShowUserMenu(false) }} 
                   className="w-full text-left px-4 py-2 border-b border-gray-200 hover:bg-indigo-50"
                 >
                   <p className="text-sm font-medium text-gray-900">{authUser?.email || "user@example.com"}</p>

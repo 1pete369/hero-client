@@ -4,9 +4,15 @@ export {
   updateTodo,
   deleteTodo,
   toggleTodoStatus,
+  getCalendarSyncStatus,
+  toggleCalendarSync,
+  syncTodoToCalendar,
+  syncAllTodosToCalendar,
+  unsyncTodoFromCalendar,
   type Todo,
   type CreateTodoData,
   type UpdateTodoData,
+  type CalendarSyncStatus,
 } from "./todos.service"
 
 

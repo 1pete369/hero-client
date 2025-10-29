@@ -15,6 +15,8 @@ export interface Todo {
   completedDates: string[]
   scheduledDate: string | null
   color: "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray"
+  googleCalendarEventId?: string | null
+  syncedToCalendar?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -85,4 +87,41 @@ export const toggleTodoStatus = async (todoId: string): Promise<Todo> => {
   return response.data
 }
 
+// Calendar sync functions
+export interface CalendarSyncStatus {
+  syncEnabled: boolean
+  hasGoogleAccount: boolean
+  hasRefreshToken: boolean
+}
+
+export const getCalendarSyncStatus = async (): Promise<CalendarSyncStatus> => {
+  const response = await axiosAppInstance.get("/calendar/status")
+  return response.data
+}
+
+export const toggleCalendarSync = async (enabled: boolean): Promise<{ syncEnabled: boolean; message: string }> => {
+  const response = await axiosAppInstance.post("/calendar/toggle", { enabled })
+  return response.data
+}
+
+export const syncTodoToCalendar = async (todoId: string): Promise<{ success: boolean; task: Todo; message: string }> => {
+  const response = await axiosAppInstance.post(`/calendar/sync/${todoId}`)
+  return response.data
+}
+
+export const syncAllTodosToCalendar = async (): Promise<{ 
+  success: boolean
+  syncedCount: number
+  failedCount: number
+  totalTasks: number
+  message: string 
+}> => {
+  const response = await axiosAppInstance.post("/calendar/sync-all")
+  return response.data
+}
+
+export const unsyncTodoFromCalendar = async (todoId: string): Promise<{ success: boolean; task: Todo; message: string }> => {
+  const response = await axiosAppInstance.delete(`/calendar/sync/${todoId}`)
+  return response.data
+}
 

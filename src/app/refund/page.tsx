@@ -25,6 +25,8 @@ export default function RefundPolicyPage() {
           <p>You may cancel anytime via the <span className="font-medium">Dashboard → Billing</span>. Your access continues until the end of the paid period.</p>
         </article>
 
+        {/* Timeline section intentionally omitted per policy simplification */}
+
         <article id="refunds" className="space-y-3">
           <h2 className="text-2xl font-semibold text-indigo-700">Refund policy</h2>
           <ul className="list-disc pl-6 space-y-2">
@@ -45,6 +47,15 @@ export default function RefundPolicyPage() {
           <h2 className="text-2xl font-semibold text-indigo-700">Chargebacks & disputes</h2>
           <p>If you file a chargeback before contacting us, processing may be delayed and your account may be suspended until investigation concludes.</p>
         </article>
+      </section>
+
+      <section className="mt-8">
+        <div className="rounded border-3 border-black bg-white shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-4">
+          {/* <div className="flex items-center justify-between">
+            <span className="font-semibold">Bank timelines</span>
+          </div> */}
+          <p className="text-gray-700 mt-1">Refunded amount will be credited back within 3–7 business days; some banks may take up to 10.</p>
+        </div>
       </section>
 
       <aside className="mt-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -8,6 +8,8 @@ import {
   Clock,
   MoreVertical,
   Loader2,
+  Calendar as CalendarIcon,
+  RefreshCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "react-hot-toast"
@@ -42,7 +44,11 @@ import {
   updateTodo,
   deleteTodo,
   toggleTodoStatus,
+  getCalendarSyncStatus,
+  toggleCalendarSync,
+  syncAllTodosToCalendar,
   type Todo,
+  type CalendarSyncStatus,
 } from "@/services"
 import ConflictWarningDialog from "@/components/ui/ConflictWarningDialog"
 import { detectTimeConflicts, type TimeConflict } from "@/utils/timeConflict"
@@ -189,6 +195,8 @@ export default function TodosSection({
   const [isSaving, setIsSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [calendarSyncStatus, setCalendarSyncStatus] = useState<CalendarSyncStatus | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
   
   const [formData, setFormData] = useState({
     title: "",
@@ -294,7 +302,18 @@ export default function TodosSection({
 
   useEffect(() => {
     loadTodos()
+    loadCalendarSyncStatus()
   }, [])
+
+  // Load calendar sync status
+  const loadCalendarSyncStatus = async () => {
+    try {
+      const status = await getCalendarSyncStatus()
+      setCalendarSyncStatus(status)
+    } catch (error) {
+      console.error("Failed to load calendar sync status:", error)
+    }
+  }
 
   // Refresh todos when refreshTrigger changes
   useEffect(() => {
@@ -302,6 +321,45 @@ export default function TodosSection({
       loadTodos()
     }
   }, [refreshTrigger])
+
+  // Handle calendar sync toggle
+  const handleToggleCalendarSync = async () => {
+    try {
+      if (!calendarSyncStatus) return
+      
+      const newEnabled = !calendarSyncStatus.syncEnabled
+      const result = await toggleCalendarSync(newEnabled)
+      
+      setCalendarSyncStatus({
+        ...calendarSyncStatus,
+        syncEnabled: result.syncEnabled,
+      })
+      
+      toast.success(result.message)
+    } catch (error: any) {
+      console.error("Failed to toggle calendar sync:", error)
+      toast.error(error.response?.data?.error || "Failed to toggle calendar sync")
+    }
+  }
+
+  // Handle sync all todos to calendar
+  const handleSyncAllToCalendar = async () => {
+    try {
+      setIsSyncing(true)
+      const result = await syncAllTodosToCalendar()
+      
+      if (result.success) {
+        toast.success(result.message)
+        // Refresh todos to get updated sync status
+        await loadTodos()
+      }
+    } catch (error: any) {
+      console.error("Failed to sync todos to calendar:", error)
+      toast.error(error.response?.data?.error || "Failed to sync todos to calendar")
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   // Auto-refresh todos when date changes (e.g., at midnight)
   useEffect(() => {
@@ -816,6 +874,52 @@ export default function TodosSection({
         newTodoTitle={formData.title}
         newTimeSlot={`${formatTo12Hour(formData.startTime)} - ${formatTo12Hour(formData.endTime)} on ${formData.dueDate}`}
       />
+      
+      {/* Google Calendar Sync Controls */}
+      {calendarSyncStatus?.hasGoogleAccount && (
+        <div className="px-2">
+          <div className="flex items-center justify-between p-3 bg-white border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+            <div className="flex items-center gap-3">
+              <CalendarIcon className="h-5 w-5 text-indigo-600" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Google Calendar Sync</p>
+                <p className="text-xs text-gray-600">
+                  {calendarSyncStatus.syncEnabled 
+                    ? "Automatically sync todos with your calendar" 
+                    : "Enable to sync todos with Google Calendar"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {calendarSyncStatus.syncEnabled && (
+                <Button
+                  onClick={handleSyncAllToCalendar}
+                  disabled={isSyncing}
+                  size="sm"
+                  variant="outline"
+                  className="text-xs border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]"
+                >
+                  {isSyncing ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-3 w-3 mr-1.5" />
+                      Sync All
+                    </>
+                  )}
+                </Button>
+              )}
+              <Switch
+                checked={calendarSyncStatus.syncEnabled}
+                onCheckedChange={handleToggleCalendarSync}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {/* Add/Edit Form */}
       <Dialog open={showTodoForm} onOpenChange={setShowTodoForm}>
         <DialogContent className="max-w-lg border-solid border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
@@ -1291,8 +1395,14 @@ export default function TodosSection({
                         {todo.startTime && todo.endTime ? `${formatTo12Hour(todo.startTime)} - ${formatTo12Hour(todo.endTime)}` : 'Unscheduled'}
                       </span>
                     </div>
-                    {/* Right: live + scheduled */}
+                    {/* Right: live + scheduled + calendar sync */}
                     <div className="flex items-center gap-3 ">
+                      {/* Calendar sync indicator */}
+                      {todo.syncedToCalendar && (
+                        <span className="flex items-center gap-1 text-green-600" title="Synced to Google Calendar">
+                          <CalendarIcon className="h-3 w-3" />
+                        </span>
+                      )}
                       {isCurrentlyActive(todo.scheduledDate ?? null, todo.startTime ?? null, todo.endTime ?? null) && (
                         <span className="flex items-center gap-1 text-purple-600" title="Happening now">
                           <span className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></span>
