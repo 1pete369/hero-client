@@ -606,23 +606,39 @@ export default function TimelineView({
               </div>
             ) : null}
           </DragOverlay>
-           {/* Inbox of unscheduled todos */}
+           {/* Inbox of unscheduled todos and todos for selected date WITHOUT time blocks */}
            {(() => {
-             const unscheduled = todos.filter((t) => !t.scheduledDate && !pendingScheduleIds.has(t._id))
-             if (unscheduled.length === 0) return null
+             // Show:
+             // 1. Unscheduled todos (no date)
+             // 2. Todos for selected date WITHOUT time blocks (not on timeline yet)
+             const inboxTodos = todos.filter((t) => {
+               if (pendingScheduleIds.has(t._id)) return false
+               
+               // Unscheduled todos always in inbox
+               if (!t.scheduledDate) return true
+               
+               // If todo has time blocks, it's on the timeline - DON'T show in inbox
+               if (t.startTime && t.endTime) return false
+               
+               // Todos with date but NO time blocks - show in inbox for that date
+               const todoDate = new Date(t.scheduledDate).toISOString().split('T')[0]
+               return todoDate === internalSelectedDate
+             })
+             
+             if (inboxTodos.length === 0) return null
              return (
                <div className="border-b-3 border-black bg-white/90 px-3 py-2.5">
                  <div className="flex items-center justify-between mb-2">
                    <div className="flex items-center gap-2">
                      <span className="text-[12px] font-semibold text-gray-900">Inbox</span>
                      <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 text-[10px]">
-                       {unscheduled.length}
+                       {inboxTodos.length}
                      </span>
                    </div>
                    <span className="text-[10px] text-gray-500">Drag onto the timeline</span>
                  </div>
                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                   {unscheduled.map((t) => (
+                   {inboxTodos.map((t) => (
                      <InboxDraggable key={t._id} todo={t} colorMap={COLOR_BLOCK} onPressStart={() => handlePressStart(t._id)} onPressEnd={handlePressEnd} isPressing={isPressing === t._id} />
                    ))}
                  </div>
