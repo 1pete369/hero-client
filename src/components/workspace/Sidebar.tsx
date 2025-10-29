@@ -6,6 +6,7 @@ import { Bell, Settings, LogOut, User, UserCircle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 interface SidebarProps {
   activeSection: string
@@ -70,12 +71,14 @@ export default function Sidebar({
       >
         <div className="p-4 border-b-3 border-black ">
           <div className="flex items-center justify-between">
+            <Link href={"/"}>
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-indigo-600 rounded-lg  flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-sm">GF</span>
               </div>
               <span className="text-lg font-bold text-gray-900">GrindFlow</span>
             </div>
+            </Link>
             {onCloseMobileMenu && (
               <button
                 onClick={onCloseMobileMenu}
