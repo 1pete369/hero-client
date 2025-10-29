@@ -687,7 +687,10 @@ export default function TodosSection({
 
     const grouped: { [key: string]: Todo[] } = {}
 
-    todos.forEach((todo) => {
+    // Filter out unscheduled todos - they should ONLY appear in Timeline inbox
+    const scheduledTodos = todos.filter(todo => todo.scheduledDate && todo.scheduledDate.trim() !== '')
+
+    scheduledTodos.forEach((todo) => {
       // For recurring todos that occur today, group them under today's date
       // For non-recurring todos, use their scheduled date
       let groupDate: string
