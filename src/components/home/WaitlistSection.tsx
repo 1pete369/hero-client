@@ -6,7 +6,7 @@ export default function WaitlistSection() {
       <div aria-hidden={true} className="pointer-events-none absolute inset-0">
         <div className="absolute -top-10 left-1/2 -translate-x-1/2 h-48 w-48 rounded-full bg-indigo-300/20 blur-3xl" />
       </div>
-      <div className="relative max-w-3xl mx-auto bg-white/80 backdrop-blur border border-gray-200 rounded-2xl shadow-lg p-6 sm:p-10">
+      <div className="relative max-w-3xl mx-auto p-6 sm:p-10">
         <div className="mx-auto mb-6 w-fit rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">Private beta</div>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight text-center">Join the waitlist</h2>
         <p className="text-gray-600 mt-3 text-center">Be first to know when we launch. No spam, ever.</p>

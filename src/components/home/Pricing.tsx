@@ -30,7 +30,7 @@ export default function Pricing() {
               <div className="mb-6">
                 <div className="flex items-baseline justify-center gap-2">
                   <span className="text-4xl lg:text-5xl font-bold text-gray-700">
-                    $9
+                    ₹749
                   </span>
                   <span className="text-lg text-gray-600">/month</span>
                 </div>
@@ -106,7 +106,7 @@ export default function Pricing() {
               <div className="mb-6">
                 <div className="flex items-baseline justify-center gap-2">
                   <span className="text-4xl lg:text-5xl font-bold text-indigo-700">
-                    $19
+                    ₹1,599
                   </span>
                   <span className="text-lg text-gray-600">/month</span>
                 </div>

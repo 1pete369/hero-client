@@ -1,29 +1,23 @@
 export const metadata = {
-  title: "Shipping Policy - GrindFlow",
-  description: "Shipping and delivery policy for GrindFlow (digital services).",
+  title: "Shipping & Delivery – GrindFlowClub",
+  description: "How access and receipts work for our digital service.",
 }
 
 export default function ShippingPolicyPage() {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-16">
-      <h1 className="text-3xl font-bold mb-6">Shipping Policy</h1>
-      <p className="text-gray-700 mb-6">
-        GrindFlow is a digital service. No physical shipping is required. Subscription access is provisioned instantly after successful payment.
-      </p>
-      <section className="space-y-4 text-gray-700">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Delivery Timelines</h2>
-          <p>Access to paid features becomes available immediately once payment is confirmed.</p>
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Invoices</h2>
-          <p>Invoices and payment confirmations are delivered by email.</p>
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Contact</h2>
-          <p>For billing or delivery questions, contact support@grindflow.com</p>
-        </div>
+    <main className="w-full min-h-screen bg-orange-50">
+      <div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
+      <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-indigo-700">Shipping & Delivery – GrindFlowClub</h1>
+      <p className="mt-2 text-sm text-gray-500">Last updated: October 29, 2025</p>
+      <p className="mt-4 text-gray-700">GrindFlowClub is a digital service, and no physical shipping is required.</p>
+
+      <section className="mt-8 space-y-6 text-gray-800">
+        <p>Access is granted immediately upon payment or trial activation.</p>
+        <p>Receipts are emailed to you after payment.</p>
+        <p>If a payment fails, your access may be restricted until resolved.</p>
+        <p>If at any time we offer physical products, we’ll publish shipping terms on that product’s page.</p>
       </section>
+      </div>
     </main>
   )
 }

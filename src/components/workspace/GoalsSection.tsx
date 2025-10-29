@@ -616,7 +616,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-medium text-gray-900">Personal Plan</h4>
-                    <p className="text-sm text-gray-500">10 goals • $9.99/month</p>
+                    <p className="text-sm text-gray-500">10 goals • ₹799/month</p>
                   </div>
                   <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
                     Upgrade
@@ -628,7 +628,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-medium text-gray-900">Community Plan</h4>
-                    <p className="text-sm text-gray-500">50 goals • $19.99/month</p>
+                    <p className="text-sm text-gray-500">50 goals • ₹1,599/month</p>
                   </div>
                   <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
                     Upgrade
@@ -640,7 +640,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-medium text-gray-900">Premium Plan</h4>
-                    <p className="text-sm text-gray-500">Unlimited goals • $29.99/month</p>
+                    <p className="text-sm text-gray-500">Unlimited goals • ₹2,499/month</p>
                   </div>
                   <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
                     Upgrade

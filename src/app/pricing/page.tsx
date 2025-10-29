@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 const tiers = [
   {
     name: "Free",
-    price: "$0",
+    price: "₹0",
     period: "/month",
     blurb: "For anyone starting their self-improvement journey",
     features: [
@@ -23,7 +23,7 @@ const tiers = [
   },
   {
     name: "Starter",
-    price: "$19",
+    price: "₹1,599",
     period: "/month",
     blurb: "For individuals building consistency & discipline",
     features: [
@@ -39,7 +39,7 @@ const tiers = [
   },
   {
     name: "Pro",
-    price: "$29",
+    price: "₹2,499",
     period: "/month",
     blurb: "For creators & professionals seeking community accountability",
     features: [
@@ -56,7 +56,7 @@ const tiers = [
   },
   {
     name: "Elite",
-    price: "$49",
+    price: "₹4,199",
     period: "/month",
     blurb: "For high‑performers who want a full life system",
     features: [
