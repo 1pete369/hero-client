@@ -35,7 +35,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-20 md:pt-24">
       <div className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
         {/* Left sidebar */}
         <aside className="rounded bg-white border-3 border-black p-2 h-fit md:sticky md:top-6 md:self-start shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
@@ -78,7 +78,7 @@ export default function DashboardPage() {
         <section className="space-y-6">
 
           {section === "overview" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <div className="rounded bg-white border-3 border-black p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
                 <div className="text-gray-900 text-lg font-semibold">Pro</div>
                 <div className="text-gray-700 mt-1">$20/mo.</div>
