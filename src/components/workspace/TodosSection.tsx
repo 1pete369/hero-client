@@ -303,6 +303,32 @@ export default function TodosSection({
     }
   }, [refreshTrigger])
 
+  // Auto-refresh todos when date changes (e.g., at midnight)
+  useEffect(() => {
+    const checkDateChange = () => {
+      const currentDate = getTodayISO()
+      const storedDate = sessionStorage.getItem('lastCheckedDate')
+      
+      if (storedDate && storedDate !== currentDate) {
+        // Date has changed, reload todos and force re-render
+        console.log('Date changed from', storedDate, 'to', currentDate, '- refreshing todos')
+        loadTodos()
+        setCurrentTime(new Date()) // Force re-render to update filtered todos
+      }
+      
+      sessionStorage.setItem('lastCheckedDate', currentDate)
+    }
+
+    // Check immediately
+    checkDateChange()
+
+    // Check every minute for date changes
+    const interval = setInterval(checkDateChange, 60000) // Check every 60 seconds
+
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Update parent component with todos data
   useEffect(() => {
     if (onTodosUpdate) {
@@ -603,6 +629,11 @@ export default function TodosSection({
     const isPast = todoDateStr ? todoDateStr < today : false
     const isFuture = todoDateStr ? todoDateStr > today : false
     
+    // Inbox logic: Show unscheduled todos OR todos that occur today
+    // Don't show future scheduled todos in inbox (they only appear on timeline)
+    // If todo has a scheduledDate and it's in the future, DON'T show in inbox
+    const showInInbox = (!todoDateStr) || (isToday && !isFuture)
+    
     // Extra filters
     const matchesPriority =
       priorityFilter === "all" || todo.priority === priorityFilter
@@ -610,21 +641,21 @@ export default function TodosSection({
       categoryFilter === "all" || todo.category === categoryFilter
     
     if (filter === "all") {
-      // Show only today's todos (both completed and pending)
-      return isToday && matchesPriority && matchesCategory
+      // Inbox: Unscheduled todos + today's todos (not future scheduled)
+      return showInInbox && matchesPriority && matchesCategory
     }
     if (filter === "pending") {
-      // Show only today's incomplete todos
+      // Show only incomplete inbox todos
       const done = isCompletedForDisplay(todo)
-      return !done && isToday && matchesPriority && matchesCategory
+      return !done && showInInbox && matchesPriority && matchesCategory
     }
     if (filter === "completed") {
-      // Show only today's completed todos
+      // Show only completed inbox todos
       const done = isCompletedForDisplay(todo)
-      return done && isToday && matchesPriority && matchesCategory
+      return done && showInInbox && matchesPriority && matchesCategory
     }
     if (filter === "upcoming") {
-      // Show future incomplete todos
+      // Show future scheduled todos (these appear on timeline, not inbox)
       return !!todoDateStr && isFuture && !todo.isCompleted && matchesPriority && matchesCategory
     }
     if (filter === "past") {
@@ -979,9 +1010,14 @@ export default function TodosSection({
                             id="dueDate"
                             type="date"
                             value={formData.dueDate}
-                            onChange={(e) =>
-                              setFormData({ ...formData, dueDate: e.target.value })
-                            }
+                            onChange={(e) => {
+                              const selectedDate = e.target.value
+                              setFormData({ ...formData, dueDate: selectedDate })
+                              // Auto-uncheck schedule later if selecting a specific date
+                              if (selectedDate && selectedDate !== getTodayISO()) {
+                                setScheduleLater(false)
+                              }
+                            }}
                             required={!scheduleLater}
                             className="w-full border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus-visible:outline-none focus:outline-none"
                           />
@@ -999,11 +1035,14 @@ export default function TodosSection({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setFormData({ ...formData, dueDate: getTomorrowISO() })}
+                      onClick={() => {
+                        setFormData({ ...formData, dueDate: getTomorrowISO() })
+                        setScheduleLater(false) // Auto-uncheck schedule later for future dates
+                      }}
                       className={`text-xs border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:ring-0 focus-visible:ring-0 ${formData.dueDate === getTomorrowISO() ? 'bg-indigo-600 text-white hover:bg-indigo-700' : ''}`}
                     >
                               Tomorrow
-                            </Button>
+                    </Button>
                           </div>
                         </div>
                       </div>
