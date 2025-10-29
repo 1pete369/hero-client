@@ -629,10 +629,11 @@ export default function TodosSection({
     const isPast = todoDateStr ? todoDateStr < today : false
     const isFuture = todoDateStr ? todoDateStr > today : false
     
-    // Inbox logic: Show unscheduled todos OR todos that occur today
-    // Don't show future scheduled todos in inbox (they only appear on timeline)
-    // If todo has a scheduledDate and it's in the future, DON'T show in inbox
-    const showInInbox = (!todoDateStr) || (isToday && !isFuture)
+    // Inbox logic:
+    // 1. Unscheduled todos (no date) → Always in inbox
+    // 2. Today's todos (with or without time) → Show in inbox
+    // 3. Future dated todos → NOT in inbox (appear when date arrives)
+    const showInInbox = !todoDateStr || isToday
     
     // Extra filters
     const matchesPriority =
@@ -687,8 +688,14 @@ export default function TodosSection({
 
     const grouped: { [key: string]: Todo[] } = {}
 
-    // Filter out unscheduled todos - they should ONLY appear in Timeline inbox
-    const scheduledTodos = todos.filter(todo => todo.scheduledDate && todo.scheduledDate.trim() !== '')
+    // Filter out todos that should only appear in Timeline inbox:
+    // 1. Unscheduled (no date)
+    // 2. Has date but no time block (means "Schedule Later" was on)
+    const scheduledTodos = todos.filter(todo => {
+      const hasDate = todo.scheduledDate && todo.scheduledDate.trim() !== ''
+      const hasTime = todo.startTime && todo.endTime
+      return hasDate && hasTime
+    })
 
     scheduledTodos.forEach((todo) => {
       // For recurring todos that occur today, group them under today's date
@@ -1014,12 +1021,7 @@ export default function TodosSection({
                             type="date"
                             value={formData.dueDate}
                             onChange={(e) => {
-                              const selectedDate = e.target.value
-                              setFormData({ ...formData, dueDate: selectedDate })
-                              // Auto-uncheck schedule later if selecting a specific date
-                              if (selectedDate && selectedDate !== getTodayISO()) {
-                                setScheduleLater(false)
-                              }
+                              setFormData({ ...formData, dueDate: e.target.value })
                             }}
                             required={!scheduleLater}
                             className="w-full border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus-visible:ring-0 focus:ring-0 focus-visible:outline-none focus:outline-none"
@@ -1040,7 +1042,6 @@ export default function TodosSection({
                       size="sm"
                       onClick={() => {
                         setFormData({ ...formData, dueDate: getTomorrowISO() })
-                        setScheduleLater(false) // Auto-uncheck schedule later for future dates
                       }}
                       className={`text-xs border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:ring-0 focus-visible:ring-0 ${formData.dueDate === getTomorrowISO() ? 'bg-indigo-600 text-white hover:bg-indigo-700' : ''}`}
                     >
