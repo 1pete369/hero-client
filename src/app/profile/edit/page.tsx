@@ -89,7 +89,7 @@ export default function EditProfilePage() {
       await profileService.updateProfile(updateData);
       await checkAuth();
       toast.success("Profile updated successfully!");
-      router.push("/profile");
+      router.push("/dashboard");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to update profile");
     } finally {
@@ -174,7 +174,7 @@ export default function EditProfilePage() {
                   {isLoading ? (<Loader2 className="h-4 w-4 animate-spin" />) : (<Save className="h-4 w-4" />)}
                   {isLoading ? "Saving..." : "Save Changes"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => router.push("/profile")}>
+                <Button type="button" variant="outline" onClick={() => router.push("/dashboard")}>
                   Cancel
                 </Button>
               </div>

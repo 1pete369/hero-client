@@ -3,9 +3,8 @@ import Hero from "@/components/home/Hero"
 import Features from "@/components/home/Features"
 // Removed: SocialProof, HowItWorks, Pricing for minimal waitlist landing
 import Footer from "@/components/home/Footer"
-import dynamic from "next/dynamic"
-
-const WaitlistSection = dynamic(() => import("@/components/home/WaitlistSection"), { ssr: false })
+// import dynamic from "next/dynamic"
+// const WaitlistSection = dynamic(() => import("@/components/home/WaitlistSection"), { ssr: false })
 
 export default function HomePage() {
   return (
@@ -18,8 +17,8 @@ export default function HomePage() {
 
       <Hero />
       <Features />
-      {/* LaunchList custom form (after services/features) */}
-      <WaitlistSection />
+      {/* Waitlist temporarily disabled */}
+      {/* <WaitlistSection /> */}
       <Footer />
     </div>
   )

@@ -68,20 +68,7 @@ export default function Hero() {
                   </Link>
                 </Button>
 
-                <Button
-                  asChild
-                  variant="outline"
-                  className="bg-white hover:bg-gray-50 text-gray-800 border-2 border-gray-300 hover:border-gray-400 px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-                >
-                  <Link
-                    href="/demo"
-                    onClick={() => toast.success("Playing demo…")}
-                    aria-label="Watch a short GrindFlow demo"
-                  >
-                    <PlayCircle size={18} className="mr-2" aria-hidden="true" />
-                    Watch Demo
-                  </Link>
-                </Button>
+                {/* Demo removed */}
               </>
             )}
           </div>
