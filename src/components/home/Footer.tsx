@@ -15,7 +15,7 @@ export default function Footer() {
         </div>
         <div className="border-t border-gray-800 mt-6 pt-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-gray-400 text-sm">© {currentYear} GrindFlow. All rights reserved.</div>
+            <div className="text-gray-400 text-sm">© {currentYear} GrindFlowClub. All rights reserved.</div>
             <div className="text-gray-400 text-sm">
               <div className="flex flex-wrap items-center gap-4">
                 <Link href="/privacy" className="hover:text-white">Privacy</Link>

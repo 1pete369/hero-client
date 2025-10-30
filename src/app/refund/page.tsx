@@ -5,8 +5,8 @@ export const metadata = {
 
 export default function RefundPolicyPage() {
   return (
-    <main className="w-full min-h-screen bg-yellow-50">
-      <div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
+    <main className="w-full min-h-screen pt-10 bg-yellow-50">
+      <div className="max-w-4xl mx-auto px-6 sm:py-14">
       <div className="mb-8">
         {/* <div className="text-xs font-semibold tracking-wide uppercase text-indigo-700">Policy</div> */}
         <h1 className="mt-4 text-3xl sm:text-4xl font-semibold leading-tight tracking-tight text-indigo-700">Cancellation & Refunds – GrindFlowClub</h1>

@@ -51,7 +51,8 @@ export default function Navbar() {
   }
 
   return (
-    <div className="sticky top-0 z-50 bg-white">
+    <div className="fixed w-full
+     top-0 z-50 bg-white">
       <div className="flex justify-between items-center h-16 md:h-20 w-full px-4 md:px-6 py-3 border-3 border-black bg-white shadow-[4px_4px_0_0_#000]">
         {/* Left Section - Branding and Offer */}
           <Link href={"/"}>

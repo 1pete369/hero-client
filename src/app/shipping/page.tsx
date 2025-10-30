@@ -5,7 +5,7 @@ export const metadata = {
 
 export default function ShippingPolicyPage() {
   return (
-    <main className="w-full min-h-screen bg-orange-50">
+    <main className="w-full min-h-screen pt-10 bg-orange-50">
       <div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
       <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-indigo-700">Shipping & Delivery – GrindFlowClub</h1>
       <p className="mt-2 text-sm text-gray-500">Last updated: October 29, 2025</p>

@@ -76,7 +76,7 @@ const tiers = [
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen pt-10 bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">GrindFlow Pricing Plans</h1>

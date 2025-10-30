@@ -52,7 +52,7 @@ export default function DashboardPage() {
             </div>
             <Link
               href="/profile/edit"
-              className="inline-flex items-center justify-center bg-white text-gray-800 border-3 border-black rounded p-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+              className="inline-flex items-center ml-1 justify-center bg-white text-gray-800 border-3 border-black rounded p-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
               aria-label="Edit profile"
               title="Edit profile"
             >

@@ -5,7 +5,7 @@ export const metadata = {
 
 export default function ContactPage() {
   return (
-    <main className="w-full min-h-screen bg-indigo-50">
+    <main className="w-full min-h-screen bg-indigo-50 pt-10 md:pt-10">
       <div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
       <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-indigo-700">Contact Us – GrindFlowClub</h1>
       <p className="mt-2 text-gray-600">We aim to respond within 1–2 business days. For billing enquiries please include your account email and transaction ID.</p>
