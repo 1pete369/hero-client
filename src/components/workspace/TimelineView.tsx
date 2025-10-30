@@ -579,6 +579,25 @@ export default function TimelineView({
         </div>
       )}
 
+      {/* Compact date navigation when header is hidden (mobile/tablet/modal) */}
+      {!showHeader && (
+        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-3 py-2">
+          <button onClick={goToPreviousDay} className="p-1 hover:bg-gray-200 rounded" aria-label="Previous day">
+            <ChevronLeft className="h-4 w-4 text-gray-600" />
+          </button>
+          <button onClick={goToToday} className="px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-200 rounded" aria-label="Today">
+            {(() => {
+              const [year, month, day] = internalSelectedDate.split('-').map(Number)
+              const date = new Date(year, month - 1, day)
+              return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+            })()}
+          </button>
+          <button onClick={goToNextDay} className="p-1 hover:bg-gray-200 rounded" aria-label="Next day">
+            <ChevronRight className="h-4 w-4 text-gray-600" />
+          </button>
+        </div>
+      )}
+
        {/* Body — fills parent card neatly */}
        <div className="relative flex-1 overflow-hidden">
          <DndContext
