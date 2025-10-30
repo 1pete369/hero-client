@@ -39,15 +39,25 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
         {/* Left sidebar */}
         <aside className="rounded bg-white border-3 border-black p-2 h-fit md:sticky md:top-6 md:self-start shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-          <div className="px-3 py-3 border-b-3 border-black flex items-center gap-3">
-            <Avatar className="h-8 w-8 ring-2 ring-black">
-              <AvatarImage src={authUser?.profilePic || ""} alt={displayFullName || "User"} />
-              <AvatarFallback>{(displayFullName?.[0] || displayUsername?.[0] || "U").toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="text-gray-900 text-sm font-semibold">{displayFullName}</div>
-              <div className="text-gray-600 text-xs">{authUser?.email}</div>
+          <div className="px-3 py-3 border-b-3 border-black flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-8 w-8 ring-2 ring-black">
+                <AvatarImage src={authUser?.profilePic || ""} alt={displayFullName || "User"} />
+                <AvatarFallback>{(displayFullName?.[0] || displayUsername?.[0] || "U").toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="text-gray-900 text-sm font-semibold">{displayFullName}</div>
+                <div className="text-gray-600 text-xs">{authUser?.email}</div>
+              </div>
             </div>
+            <Link
+              href="/profile/edit"
+              className="inline-flex items-center justify-center bg-white text-gray-800 border-3 border-black rounded p-1.5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+              aria-label="Edit profile"
+              title="Edit profile"
+            >
+              <Pencil className="h-4 w-4" />
+            </Link>
           </div>
           <nav className="py-2">
             {[
@@ -72,6 +82,8 @@ export default function DashboardPage() {
               )
             })}
           </nav>
+
+          {/* End sidebar header */}
         </aside>
 
         {/* Right content */}
@@ -85,16 +97,16 @@ export default function DashboardPage() {
                 <p className="text-gray-700 mt-3 text-sm">Your current plan with premium access and more.</p>
                 <Button className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white border-3 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]">Manage Subscription</Button>
               </div>
-              <div className="rounded bg-white border-3 border-black p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+              {/* <div className="rounded bg-white border-3 border-black p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
                 <div className="text-gray-900 text-lg font-semibold">On-Demand Usage</div>
                 <p className="text-gray-700 mt-3 text-sm">Go beyond your plan's included quota.</p>
                 <Button className="mt-4 bg-white text-gray-800 border-3 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]">Enable</Button>
-              </div>
+              </div> */}
             </div>
           )}
 
           {section === "settings" && (
-            <Card className="bg-white border-3 border-black text-gray-900 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+            <Card className="bg-white rounded border-3 border-black text-gray-900 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <CardHeader>
                 <CardTitle>Settings</CardTitle>
                 <CardDescription>General account preferences</CardDescription>
@@ -104,7 +116,7 @@ export default function DashboardPage() {
           )}
 
           {section === "usage" && (
-            <Card className="bg-white border-3 border-black text-gray-900 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+            <Card className="bg-white rounded border-3 border-black text-gray-900 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <CardHeader>
                 <CardTitle>Usage</CardTitle>
                 <CardDescription>Your analytics and quotas</CardDescription>
@@ -114,7 +126,7 @@ export default function DashboardPage() {
           )}
 
           {section === "billing" && (
-            <Card className="bg-white border-3 border-black text-gray-900 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+            <Card className="bg-white rounded border-3 border-black text-gray-900 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <CardHeader>
                 <CardTitle>Billing & Invoices</CardTitle>
                 <CardDescription>Manage payment methods and invoices</CardDescription>

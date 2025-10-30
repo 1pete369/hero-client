@@ -875,8 +875,8 @@ export default function TodosSection({
         newTimeSlot={`${formatTo12Hour(formData.startTime)} - ${formatTo12Hour(formData.endTime)} on ${formData.dueDate}`}
       />
       
-      {/* Google Calendar Sync Controls */}
-      {calendarSyncStatus?.hasGoogleAccount && (
+      {/* Google Calendar Sync Controls (temporarily disabled) */}
+      {false && calendarSyncStatus?.hasGoogleAccount && (
         <div className="px-2">
           <div className="flex items-center justify-between p-3 bg-white border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
             <div className="flex items-center gap-3">

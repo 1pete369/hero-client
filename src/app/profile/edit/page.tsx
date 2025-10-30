@@ -124,7 +124,7 @@ export default function EditProfilePage() {
           <p className="text-gray-600">Update your personal information and profile picture</p>
         </div>
 
-        <Card>
+        <Card className="bg-white border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
@@ -136,16 +136,16 @@ export default function EditProfilePage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative">
-                  <Avatar className="h-24 w-24">
+                  <Avatar className="h-24 w-24 ring-2 ring-black">
                     <AvatarImage src={formData.profilePic} alt="Profile" />
                     <AvatarFallback className="text-lg">{formData.fullName.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <Button type="button" size="sm" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0" onClick={() => fileInputRef.current?.click()} disabled={isUploadingImage}>
+                  <Button type="button" size="sm" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0 bg-white border-3 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]" onClick={() => fileInputRef.current?.click()} disabled={isUploadingImage}>
                     {isUploadingImage ? (<Loader2 className="h-4 w-4 animate-spin" />) : (<Camera className="h-4 w-4" />)}
                   </Button>
                 </div>
                 {formData.profilePic && (
-                  <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage}>Remove</Button>
+                  <Button type="button" variant="outline" size="sm" className="bg-white border-3 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]" onClick={handleRemoveImage}>Remove</Button>
                 )}
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
               </div>
@@ -153,28 +153,28 @@ export default function EditProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName" className="flex items-center gap-2"><User className="h-4 w-4" />Full Name</Label>
-                  <Input id="fullName" name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Enter your full name" className={errors.fullName ? "border-red-500" : ""} />
+                  <Input id="fullName" name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Enter your full name" className={`${errors.fullName ? "border-red-500" : ""} border-3 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]`} />
                   {errors.fullName && (<p className="text-sm text-red-500">{errors.fullName}</p>)}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="username" className="flex items-center gap-2"><AtSign className="h-4 w-4" />Username</Label>
-                  <Input id="username" name="username" value={formData.username} onChange={handleInputChange} placeholder="Enter your username" className={errors.username ? "border-red-500" : ""} />
+                  <Input id="username" name="username" value={formData.username} onChange={handleInputChange} placeholder="Enter your username" className={`${errors.username ? "border-red-500" : ""} border-3 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]`} />
                   {errors.username && (<p className="text-sm text-red-500">{errors.username}</p>)}
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="flex items-center gap-2"><Mail className="h-4 w-4" />Email Address</Label>
-                <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email address" className={errors.email ? "border-red-500" : ""} />
+                <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email address" className={`${errors.email ? "border-red-500" : ""} border-3 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]`} />
                 {errors.email && (<p className="text-sm text-red-500">{errors.email}</p>)}
               </div>
 
               <div className="flex gap-4 pt-4">
-                <Button type="submit" disabled={isLoading} className="flex items-center gap-2">
+                <Button type="submit" disabled={isLoading} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white border-3 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
                   {isLoading ? (<Loader2 className="h-4 w-4 animate-spin" />) : (<Save className="h-4 w-4" />)}
                   {isLoading ? "Saving..." : "Save Changes"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => router.push("/dashboard")}>
+                <Button type="button" variant="outline" className="bg-white text-gray-800 border-3 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]" onClick={() => router.push("/dashboard")}>
                   Cancel
                 </Button>
               </div>
