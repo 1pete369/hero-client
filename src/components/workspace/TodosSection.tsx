@@ -883,15 +883,11 @@ export default function TodosSection({
               <CalendarIcon className="h-5 w-5 text-indigo-600" />
               <div>
                 <p className="text-sm font-semibold text-gray-900">Google Calendar Sync</p>
-                <p className="text-xs text-gray-600">
-                  {calendarSyncStatus.syncEnabled 
-                    ? "Automatically sync todos with your calendar" 
-                    : "Enable to sync todos with Google Calendar"}
-                </p>
+                <p className="text-xs text-gray-600">Calendar sync is currently disabled.</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {calendarSyncStatus.syncEnabled && (
+              {calendarSyncStatus?.syncEnabled && (
                 <Button
                   onClick={handleSyncAllToCalendar}
                   disabled={isSyncing}
@@ -913,7 +909,7 @@ export default function TodosSection({
                 </Button>
               )}
               <Switch
-                checked={calendarSyncStatus.syncEnabled}
+                checked={Boolean(calendarSyncStatus?.syncEnabled)}
                 onCheckedChange={handleToggleCalendarSync}
               />
             </div>
