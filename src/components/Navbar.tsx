@@ -42,7 +42,7 @@ export default function Navbar() {
           <span className="text-gray-900 font-bold text-xl">GrindFlowClub</span>
         </div>
         <Link href={"/"}>
-          <Button className="bg-white text-gray-800 border-3 border-black rounded-full px-4 py-2 shadow-[3px_3px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000]">
+          <Button className="bg-white text-gray-800 border-3 border-black rounded-full px-4 py-2 shadow-[3px_3px_0_0_#000] hover:bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000]">
             <ArrowLeft size={18} />
           </Button>
         </Link>
