@@ -39,7 +39,8 @@ function DraggableTimelineBlock({
   COLOR_BLOCK,
   isPressing,
   onPressStart,
-  onPressEnd
+  onPressEnd,
+  disabled
 }: {
   todo: Todo
   top: number
@@ -57,6 +58,7 @@ function DraggableTimelineBlock({
   isPressing: boolean
   onPressStart: () => void
   onPressEnd: () => void
+  disabled: boolean
 }) {
   const {
     attributes,
@@ -66,6 +68,7 @@ function DraggableTimelineBlock({
     isDragging,
   } = useDraggable({
     id: todo._id,
+    disabled,
   })
 
 
@@ -95,15 +98,15 @@ function DraggableTimelineBlock({
         "before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 before:rounded",
         leftColor,
         blockColor,
-        isDragging ? "cursor-grabbing shadow-lg z-50" : "cursor-grab",
+        disabled ? "cursor-not-allowed" : (isDragging ? "cursor-grabbing shadow-lg z-50" : "cursor-grab"),
         isPressing ? "scale-105 shadow-lg z-40" : "",
       ].join(" ")}
       aria-label={`Press and hold to drag ${todo.title}`}
-      onTouchStart={onPressStart}
-      onTouchEnd={onPressEnd}
-      onTouchCancel={onPressEnd}
-      {...listeners}
-      {...attributes}
+      onTouchStart={disabled ? undefined : onPressStart}
+      onTouchEnd={disabled ? undefined : onPressEnd}
+      onTouchCancel={disabled ? undefined : onPressEnd}
+      {...(disabled ? {} as any : listeners)}
+      {...(disabled ? {} as any : attributes)}
     >
       <div className="flex h-full flex-col px-2.5 py-1.5">
         <div className="flex items-center justify-between">
@@ -569,12 +572,12 @@ export default function TimelineView({
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[11px] text-gray-700">
+            <span className="rounded-full bg-gray-200 p-1 text-[11px] text-gray-700">
               {filtered.length}
             </span>
-            <span className="text-[10px] text-gray-500 font-mono">
+            {/* <span className="text-[10px] text-gray-500 font-mono">
               {internalSelectedDate}
-            </span>
+            </span> */}
           </div>
         </div>
       )}
@@ -647,8 +650,9 @@ export default function TimelineView({
                return todoDate === internalSelectedDate
              })
              
-             if (inboxTodos.length === 0) return null
-             return (
+            if (inboxTodos.length === 0) return null
+            const isPastDate = internalSelectedDate < getLocalDateString(new Date())
+            return (
                <div className="border-b-3 border-black bg-white/90 px-3 py-2.5">
                  <div className="flex items-center justify-between mb-2">
                    <div className="flex items-center gap-2">
@@ -659,10 +663,10 @@ export default function TimelineView({
                    </div>
                    <span className="text-[10px] text-gray-500">Drag onto the timeline</span>
                  </div>
-                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                   {inboxTodos.map((t) => (
-                     <InboxDraggable key={t._id} todo={t} colorMap={COLOR_BLOCK} onPressStart={() => handlePressStart(t._id)} onPressEnd={handlePressEnd} isPressing={isPressing === t._id} />
-                   ))}
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  {inboxTodos.map((t) => (
+                    <InboxDraggable key={t._id} todo={t} colorMap={COLOR_BLOCK} onPressStart={() => handlePressStart(t._id)} onPressEnd={handlePressEnd} isPressing={isPressing === t._id} disabled={isPastDate} />
+                  ))}
                  </div>
                </div>
              )
@@ -713,6 +717,17 @@ export default function TimelineView({
               {metas.map(({ todo, top, height, start, end, duration, col, widthCols }) => {
                 const today = getLocalDateString(new Date())
                 const isToday = internalSelectedDate === today
+                const isPastDate = internalSelectedDate < today
+                const occurrenceCompleted = (() => {
+                  // For recurring todos, check if selected date is in completedDates; otherwise use isCompleted
+                  const rec: any = (todo as any).recurring
+                  if (rec && rec !== 'none') {
+                    const dates = Array.isArray((todo as any).completedDates) ? (todo as any).completedDates : []
+                    return dates.includes(internalSelectedDate)
+                  }
+                  return Boolean(todo.isCompleted)
+                })()
+                const dragDisabled = isPastDate || occurrenceCompleted
 
                 // width/left for columns inside a narrow box (max 3)
                 const mobilePad = isMobile ? 6 : 0
@@ -739,6 +754,7 @@ export default function TimelineView({
                     isPressing={isPressing === todo._id}
                     onPressStart={() => handlePressStart(todo._id)}
                     onPressEnd={handlePressEnd}
+                    disabled={dragDisabled}
                   />
                 )
               })}
@@ -775,8 +791,8 @@ export default function TimelineView({
 }
 
 // Draggable chip for Inbox items
-function InboxDraggable({ todo, colorMap, onPressStart, onPressEnd, isPressing }: { todo: Todo, colorMap: Record<string,string>, onPressStart: () => void, onPressEnd: () => void, isPressing: boolean }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: todo._id })
+function InboxDraggable({ todo, colorMap, onPressStart, onPressEnd, isPressing, disabled }: { todo: Todo, colorMap: Record<string,string>, onPressStart: () => void, onPressEnd: () => void, isPressing: boolean, disabled: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: todo._id, disabled })
   const style = { transform: transform ? `translate3d(${transform.x ?? 0}px, ${transform.y ?? 0}px, 0)` : undefined, touchAction: 'none' as const }
   const baseColor = (todo.color ?? 'blue') as string
   const leftAccent = COLOR_LEFT[baseColor] ?? COLOR_LEFT.blue
@@ -786,11 +802,11 @@ function InboxDraggable({ todo, colorMap, onPressStart, onPressEnd, isPressing }
     'before:absolute before:left-0.5 before:top-1/2 before:-translate-y-1/2 before:h-3.5 before:w-1.5 before:rounded before:content-[""]',
     leftAccent.replace('before:bg-', 'before:bg-'),
     'border-gray-200',
-    isDragging ? 'cursor-grabbing shadow-md opacity-0' : 'cursor-grab',
+    disabled ? 'cursor-not-allowed opacity-60' : (isDragging ? 'cursor-grabbing shadow-md opacity-0' : 'cursor-grab'),
     isPressing ? 'scale-105 shadow-md' : '',
   ].join(' ')
   return (
-    <div ref={setNodeRef} style={style} className={classes} onTouchStart={onPressStart} onTouchEnd={onPressEnd} onTouchCancel={onPressEnd} {...listeners} {...attributes}>
+    <div ref={setNodeRef} style={style} className={classes} onTouchStart={disabled ? undefined : onPressStart} onTouchEnd={disabled ? undefined : onPressEnd} onTouchCancel={disabled ? undefined : onPressEnd} {...(disabled ? {} as any : listeners)} {...(disabled ? {} as any : attributes)}>
       <span className="truncate max-w-[160px]">{todo.title}</span>
       
     </div>

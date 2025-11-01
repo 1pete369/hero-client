@@ -180,7 +180,9 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
       toast.success(isCompleted ? "Habit completed!" : "Habit marked incomplete")
     } catch (error) {
       console.error("Failed to toggle habit completion", error)
-      toast.error("Failed to update habit")
+      // Surface backend message (e.g., weekly rule violations)
+      const msg = (error as any)?.response?.data?.error || "Failed to update habit"
+      toast.error(msg)
     }
   }
 
@@ -436,7 +438,15 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
                   )
                 })()}
                 <Button
-                  onClick={() => toggleTodayCompletion(habit._id)}
+                  onClick={() => {
+                    const map = ['sun','mon','tue','wed','thu','fri','sat']
+                    const todayKey = map[new Date().getUTCDay()]
+                    if (habit.frequency === 'weekly' && (!habit.days || habit.days.length === 0 || !habit.days.includes(todayKey))) {
+                      toast.error(`This weekly habit can only be completed on ${habit.days?.join(', ').toUpperCase() || 'its selected day'}.`)
+                      return
+                    }
+                    toggleTodayCompletion(habit._id)
+                  }}
                   disabled={(() => {
                     const map = ['sun','mon','tue','wed','thu','fri','sat']
                     const todayKey = map[new Date().getUTCDay()]

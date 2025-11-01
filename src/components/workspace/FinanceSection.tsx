@@ -42,10 +42,11 @@ import {
 } from "@/services/finance.service";
 import TransactionForm from "./TransactionForm";
 import FinanceDashboard from "./FinanceDashboard";
+import FinancePlanner from "./FinancePlanner";
 import toast from "react-hot-toast";
 
 interface FinanceSectionProps {
-  viewMode: "list" | "dashboard";
+  viewMode: "list" | "dashboard" | "planner";
   showTransactionForm: boolean;
   setShowTransactionForm: (show: boolean) => void;
   timeRange: string;
@@ -190,6 +191,8 @@ export default function FinanceSection({
         <div className="flex-1 overflow-y-auto scrollbar-hide px-2">
           <FinanceDashboard timeRange={timeRange} />
         </div>
+      ) : viewMode === "planner" ? (
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-2" />
       ) : (
         <>
           {/* Summary Cards */}

@@ -44,7 +44,7 @@ function WorkspaceContent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showTodoForm, setShowTodoForm] = useState(false)
   const [showFinanceForm, setShowFinanceForm] = useState(false)
-  const [financeViewMode, setFinanceViewMode] = useState<"list" | "dashboard">("list")
+  const [financeViewMode, setFinanceViewMode] = useState<"list" | "dashboard" | "planner">("list")
   const [financeTimeRange, setFinanceTimeRange] = useState("365")
   const [todosRefreshTrigger, setTodosRefreshTrigger] = useState(0)
   const [showGoalsForm, setShowGoalsForm] = useState(false)
@@ -262,6 +262,7 @@ function WorkspaceContent() {
       : new Date().getHours() < 18
       ? "Afternoon"
       : "Evening"
+  const firstName = authUser?.fullName ? authUser.fullName.split(" ")[0] : "there"
 
   return (
     <div className="h-screen flex overflow-hidden">
@@ -285,7 +286,7 @@ function WorkspaceContent() {
             <div className="mb-4 flex flex-col  lg:flex-row lg:items-center lg:justify-between w-full flex-shrink-0  border-b-3 border-black  ">
               <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0 p-2 ">
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">{activeSection === "finance" ? "Finance" : `Good ${greeting}!`}</h1>
+                  <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">{activeSection === "finance" ? "Finance" : `Hi ${firstName}, Good ${greeting}!`}</h1>
                   <p className="text-gray-600 text-xs truncate">
                     {activeSection === "finance" ? "Track your income and expenses" : "Manage your daily tasks and priorities"}
                   </p>
@@ -379,6 +380,16 @@ function WorkspaceContent() {
                         }`}
                       >
                         List
+                      </button>
+                      <button
+                        onClick={() => setFinanceViewMode("planner")}
+                        className={`px-3 h-8 text-xs border-r-3 border-black transition-transform ${
+                          financeViewMode === "planner"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-indigo-700 hover:bg-indigo-50"
+                        }`}
+                      >
+                        Planner
                       </button>
                       <button
                         onClick={() => setFinanceViewMode("dashboard")}
