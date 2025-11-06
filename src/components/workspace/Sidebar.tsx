@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useAuth } from "@/context/useAuthContext"
-import { Bell, Settings, LogOut, User, UserCircle, X } from "lucide-react"
+import { LogOut, User, UserCircle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import GradientBlobs from "@/components/ui/GradientBlobs"
 
 interface SidebarProps {
   activeSection: string
@@ -53,8 +54,8 @@ export default function Sidebar({
     { id: "todos", title: "Todos", icon: "📝", description: "Manage your daily tasks and priorities" },
     { id: "goals", title: "Goals", icon: "🎯", description: "Set and track your long-term objectives" },
     { id: "habits", title: "Habits", icon: "🔄", description: "Build and maintain positive routines" },
-    { id: "finance", title: "Finance", icon: "💰", description: "Track income, expenses, and financial goals" },
-    { id: "notes", title: "Notes", icon: "📒", description: "Capture ideas and information" },
+    // { id: "finance", title: "Finance", icon: "💰", description: "Track income, expenses, and financial goals" },
+    // { id: "notes", title: "Notes", icon: "📒", description: "Capture ideas and information" },
   ]
 
   return (
@@ -66,9 +67,10 @@ export default function Sidebar({
           transform transition-transform duration-300 ease-in-out
           lg:translate-x-0
           ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
-          flex flex-col h-full
+          flex flex-col h-full relative
         `}
       >
+        <GradientBlobs density="low" />
         <div className="p-4 border-b-3 border-black ">
           <div className="flex items-center justify-between">
             <Link href={"/"}>
@@ -112,25 +114,6 @@ export default function Sidebar({
         </div>
 
         <div className="p-4 border-t border-gray-200 space-y-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full flex items-center justify-start gap-3 px-3 py-4 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
-          >
-            <Bell className="h-4 w-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Notifications</span>
-            <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">3</span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full flex items-center justify-start gap-3 px-3 py-4 text-left rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-sm transition-all duration-150 text-gray-700 bg-white hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-white"
-          >
-            <Settings className="h-4 w-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Settings</span>
-          </Button>
-
           <div className="relative" ref={userMenuRef}>
             <Button
               variant="ghost"

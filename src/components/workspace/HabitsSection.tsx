@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { TrendingUp, Plus, Edit, Trash2, Crown, Check, Link, MoreVertical } from "lucide-react"
 import { ArrowPathIcon, CalendarIcon } from "@heroicons/react/24/outline"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,10 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { habitsService, type Habit, type CreateHabitData, getGoals, type Goal } from "@/services"
 import toast from "react-hot-toast"
 import { formatLocalDateYYYYMMDD, addDaysLocal, todayLocalISO, isoDateOnly } from "@/lib/utils"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import confetti from "canvas-confetti"
+import { triggerCompletionCelebration } from "@/lib/utils"
 
 interface HabitsSectionProps {
   showAddForm: boolean
@@ -30,10 +34,15 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [openFreqTips, setOpenFreqTips] = useState<Record<string, boolean>>({})
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [streakPulse, setStreakPulse] = useState<string | null>(null) // Track which habit's streak is pulsing
   const getTomorrowISO = () => formatLocalDateYYYYMMDD(addDaysLocal(new Date(), 1))
+
+  const getRandomColor = () => {
+    const colors = ["blue", "green", "purple", "orange", "red", "pink", "indigo", "teal", "yellow", "gray"] as const
+    return colors[Math.floor(Math.random() * colors.length)]
+  }
 
   const [formData, setFormData] = useState<CreateHabitData>({
     title: "",
@@ -42,6 +51,7 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
     startDate: getTomorrowISO(), // default to tomorrow for non-linked habits
     category: "personal",
     linkedGoalId: undefined,
+    color: getRandomColor(),
   })
 
   // Load habits and goals on component mount
@@ -135,6 +145,7 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
       title: habit.title,
       frequency: habit.frequency,
       days: habit.days,
+      color: habit.color || "blue",
       startDate: isoDateOnly(habit.startDate),
       category: habit.category,
       linkedGoalId: goalId === "none" ? undefined : goalId,
@@ -172,11 +183,26 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
 
   const toggleTodayCompletion = async (habitId: string) => {
     try {
+      const oldHabit = habits.find(h => h._id === habitId)
+      const oldStreak = oldHabit?.streak || 0
+      
       const updatedHabit = await habitsService.toggleTodayCompletion(habitId)
       setHabits(habits.map(habit => 
         habit._id === habitId ? updatedHabit : habit
       ))
       const isCompleted = isCompletedToday(updatedHabit)
+      
+      // Trigger confetti and sound when marking as complete
+      if (isCompleted) {
+        triggerCompletionCelebration(`habit-toggle-${habitId}`, { angle: 70, spread: 40, startVelocity: 40 })
+
+        // Trigger flame pulse animation if streak increased
+        if (updatedHabit.streak > oldStreak) {
+          setStreakPulse(habitId)
+          setTimeout(() => setStreakPulse(null), 800)
+        }
+      }
+      
       toast.success(isCompleted ? "Habit completed!" : "Habit marked incomplete")
     } catch (error) {
       console.error("Failed to toggle habit completion", error)
@@ -194,23 +220,64 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
       startDate: todayLocalISO(),
       category: "personal",
       linkedGoalId: undefined,
+      color: getRandomColor(),
     })
     setShowAddForm(false)
     setEditingHabit(null)
   }
 
-  const toggleFreqTooltip = (habitId: string) => {
-    setOpenFreqTips((prev) => ({ ...prev, [habitId]: !prev[habitId] }))
+  // Auto-update color when linkedGoalId changes (inherit from goal)
+  useEffect(() => {
+    if (formData.linkedGoalId) {
+      const linkedGoal = goals.find(g => g._id === formData.linkedGoalId)
+      if (linkedGoal && linkedGoal.color) {
+        setFormData(prev => ({ ...prev, color: linkedGoal.color }))
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.linkedGoalId, goals])
+
+  // Randomize color when opening a fresh create form (not editing)
+  useEffect(() => {
+    if (showAddForm && !editingHabit) {
+      setFormData((prev) => ({ ...prev, color: getRandomColor() }))
+    }
+  }, [showAddForm, editingHabit])
+
+  const getHabitColorClasses = (color: string) => {
+    const colorMap = {
+      blue: "bg-blue-400 text-black",
+      green: "bg-green-400 text-black",
+      purple: "bg-purple-400 text-black",
+      orange: "bg-orange-400 text-black",
+      red: "bg-red-400 text-black",
+      pink: "bg-pink-400 text-black",
+      indigo: "bg-indigo-400 text-black",
+      teal: "bg-teal-400 text-black",
+      yellow: "bg-yellow-300 text-black",
+      gray: "bg-gray-400 text-black",
+    }
+    return colorMap[color as keyof typeof colorMap] || colorMap.blue
+  }
+
+  const getCompletedDayColor = (color: string) => {
+    const colorMap = {
+      blue: "bg-blue-400 border-2 border-white",
+      green: "bg-green-400 border-2 border-white",
+      purple: "bg-purple-400 border-2 border-white",
+      orange: "bg-orange-400 border-2 border-white",
+      red: "bg-red-400 border-2 border-white",
+      pink: "bg-pink-400 border-2 border-white",
+      indigo: "bg-indigo-400 border-2 border-white",
+      teal: "bg-teal-400 border-2 border-white",
+      yellow: "bg-yellow-300 border-2 border-white",
+      gray: "bg-gray-400 border-2 border-white",
+    }
+    return colorMap[color as keyof typeof colorMap] || colorMap.blue
   }
 
   const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "personal": return "bg-blue-100 text-blue-800"
-      case "health": return "bg-green-100 text-green-800"
-      case "learning": return "bg-purple-100 text-purple-800"
-      case "business": return "bg-indigo-100 text-indigo-800"
-      default: return "bg-gray-100 text-gray-800"
-    }
+    return "bg-white text-black border-2 border-black font-semibold"
   }
 
   const getFrequencyText = (frequency: string) => {
@@ -230,9 +297,10 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
   }
 
   return (
-    <div className="space-y-6">
+    <TooltipProvider>
+      <div className="space-y-6">
 
-      {/* Add/Edit Form Dialog */}
+        {/* Add/Edit Form Dialog */}
       <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
         <DialogContent className="max-w-lg border-solid border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
           <DialogHeader>
@@ -321,27 +389,41 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
               </Select>
               {formData.frequency === 'weekly' && (
                 <div className="mt-2">
-                  <Label className="mb-1 block text-xs text-gray-600">Pick a weekday</Label>
+                  <Label className="mb-1 block text-xs text-gray-600">Pick weekdays</Label>
                   <div className="grid grid-cols-7 gap-1">
-                    {['sun','mon','tue','wed','thu','fri','sat'].map((d) => {
-                      const active = (formData.days?.[0] === d)
+                    {[
+                      { key: 'sun', label: 'SUN' },
+                      { key: 'mon', label: 'MON' },
+                      { key: 'tue', label: 'TUE' },
+                      { key: 'wed', label: 'WED' },
+                      { key: 'thu', label: 'THU' },
+                      { key: 'fri', label: 'FRI' },
+                      { key: 'sat', label: 'SAT' },
+                    ].map((day) => {
+                      const active = Array.isArray(formData.days) && formData.days.includes(day.key)
                       return (
                         <button
-                          key={d}
+                          key={day.key}
                           type="button"
-                          onClick={() => setFormData({ ...formData, days: [d] })}
-                          className={`text-xs py-1.5 rounded border transition-colors ${
+                          onClick={() => {
+                            const current = Array.isArray(formData.days) ? formData.days : []
+                            const next = active
+                              ? current.filter((d) => d !== day.key)
+                              : [...current, day.key]
+                            setFormData({ ...formData, days: next })
+                          }}
+                          className={`text-xs py-1.5 rounded border transition-colors font-semibold ${
                             active
-                              ? "bg-indigo-600 border-indigo-600 text-white"
-                              : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                              ? "bg-black border-black text-white"
+                              : "bg-white border-gray-300 text-black hover:bg-gray-50"
                           }`}
                         >
-                          {d.toUpperCase()}
+                          {day.label}
                         </button>
                       )
                     })}
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-1">Weekly habits can be marked once per week, on the selected weekday.</p>
+                  <p className="text-[10px] text-gray-600 mt-1">Weekly habits can be marked on any selected weekdays.</p>
                 </div>
               )}
             </div>
@@ -386,6 +468,52 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
               </Select>
             </div>
 
+            {/* Color */}
+            <div className="space-y-2">
+              <Label>Color {formData.linkedGoalId && <span className="text-[10px] text-gray-500">(Inherited from goal)</span>}</Label>
+              <div className="grid grid-cols-10 gap-2 w-full">
+                {[
+                  { value: "blue", color: "bg-blue-500", borderColor: "border-blue-600" },
+                  { value: "green", color: "bg-green-500", borderColor: "border-green-600" },
+                  { value: "purple", color: "bg-purple-500", borderColor: "border-purple-600" },
+                  { value: "orange", color: "bg-orange-500", borderColor: "border-orange-600" },
+                  { value: "red", color: "bg-red-500", borderColor: "border-red-600" },
+                  { value: "pink", color: "bg-pink-500", borderColor: "border-pink-600" },
+                  { value: "indigo", color: "bg-indigo-500", borderColor: "border-indigo-600" },
+                  { value: "teal", color: "bg-teal-500", borderColor: "border-teal-600" },
+                  { value: "yellow", color: "bg-yellow-500", borderColor: "border-yellow-600" },
+                  { value: "gray", color: "bg-gray-500", borderColor: "border-gray-600" },
+                ].map((colorOption) => (
+                  <label
+                    key={colorOption.value}
+                    className="cursor-pointer group"
+                  >
+                    <input
+                      type="radio"
+                      name="habit-color"
+                      value={colorOption.value}
+                      checked={formData.color === colorOption.value}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          color: e.target.value as "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray",
+                        })
+                      }
+                      disabled={Boolean(formData.linkedGoalId)}
+                      className="sr-only"
+                    />
+                    <div
+                      className={`w-7 h-7 rounded-full ${colorOption.color} transition-transform ${
+                        formData.color === colorOption.value
+                          ? "border-3 border-black"
+                          : "border-0"
+                      } ${formData.linkedGoalId ? "opacity-50 cursor-not-allowed" : ""}`}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
               <Button
@@ -414,33 +542,17 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
         {habits.map((habit) => (
           <div
             key={habit._id}
-            className="transition-all bg-white h-auto min-h-[96px] w-full rounded border-solid border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+            className={`transition-all h-auto min-h-[96px] w-full rounded border-solid border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1),0_0_6px_rgba(0,0,0,0.1)] ${getHabitColorClasses(habit.color || "blue")}`}
           >
             {/* Top Section - Title and Actions */}
             <div className="flex items-center justify-between px-3 pt-3">
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                {(() => {
-                  const toggleId = `habit-${habit._id}-toggle`
-                  const map = ['sun','mon','tue','wed','thu','fri','sat']
-                  const todayKey = map[new Date().getUTCDay()]
-                  const weeklyLocked = habit.frequency === 'weekly' && (!habit.days || habit.days.length === 0 || !habit.days.includes(todayKey))
-                  const disabledToggle = habit.status === "completed" || weeklyLocked
-                  const checked = isCompletedToday(habit)
-                  return (
-                    <input
-                      id={toggleId}
-                      type="checkbox"
-                      className="sr-only"
-                      checked={checked}
-                      onChange={() => !disabledToggle && toggleTodayCompletion(habit._id)}
-                      disabled={disabledToggle}
-                    />
-                  )
-                })()}
-                <Button
-                  onClick={() => {
+                <Checkbox
+                  id={`habit-toggle-${habit._id}`}
+                  checked={isCompletedToday(habit)}
+                  onCheckedChange={(checked) => {
                     const map = ['sun','mon','tue','wed','thu','fri','sat']
-                    const todayKey = map[new Date().getUTCDay()]
+                    const todayKey = map[new Date().getDay()]
                     if (habit.frequency === 'weekly' && (!habit.days || habit.days.length === 0 || !habit.days.includes(todayKey))) {
                       toast.error(`This weekly habit can only be completed on ${habit.days?.join(', ').toUpperCase() || 'its selected day'}.`)
                       return
@@ -449,32 +561,35 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
                   }}
                   disabled={(() => {
                     const map = ['sun','mon','tue','wed','thu','fri','sat']
-                    const todayKey = map[new Date().getUTCDay()]
+                    const todayKey = map[new Date().getDay()]
                     const weeklyLocked = habit.frequency === 'weekly' && (!habit.days || habit.days.length === 0 || !habit.days.includes(todayKey))
                     return habit.status === "completed" || weeklyLocked
                   })()}
-                  className={`h-8 w-8 rounded-full border-1 border-green-500 p-0 shrink-0 ${
+                  className={`h-8 w-8 rounded-full border-2 border-black checkbox-bouncy data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white shrink-0 ${
                     (() => {
                       const map = ['sun','mon','tue','wed','thu','fri','sat']
-                      const todayKey = map[new Date().getUTCDay()]
+                      const todayKey = map[new Date().getDay()]
                       const weeklyLocked = habit.frequency === 'weekly' && (!habit.days || habit.days.length === 0 || !habit.days.includes(todayKey))
-                      if (habit.status === "completed" || weeklyLocked) return "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      return isCompletedToday(habit)
-                        ? "bg-green-500 text-white hover:bg-green-600 hover:text-white"
-                        : "bg-white hover:bg-green-50 text-gray-600 hover:text-gray-700"
+                      if (habit.status === "completed" || weeklyLocked) return "opacity-50 cursor-not-allowed"
+                      return ""
                     })()
                   }`}
-                >
-                  {isCompletedToday(habit) && <Check className="h-4 w-4" />}
-                </Button>
+                />
                 <div className="flex flex-col justify-between gap-1 flex-1 min-w-0">
                   <label
-                    htmlFor={`habit-${habit._id}-toggle`}
-                    className={`text-sm font-semibold truncate cursor-pointer ${
-                    isCompletedToday(habit) || (habit.status === "completed" && habit.endDate && new Date(habit.endDate) < new Date())
-                      ? "line-through text-gray-400"
-                      : "text-gray-900"
-                  }`}
+                    htmlFor={`habit-toggle-${habit._id}`}
+                    className={`text-sm font-semibold truncate ${
+                    (() => {
+                      const map = ['sun','mon','tue','wed','thu','fri','sat']
+                      const todayKey = map[new Date().getDay()]
+                      const weeklyLocked = habit.frequency === 'weekly' && (!habit.days || habit.days.length === 0 || !habit.days.includes(todayKey))
+                      const isDisabled = habit.status === "completed" || weeklyLocked
+                      const isStrikethrough = isCompletedToday(habit) || (habit.status === "completed" && habit.endDate && new Date(habit.endDate) < new Date())
+                    
+                    if (isStrikethrough) return "line-through text-black/70 " + (isDisabled ? "cursor-not-allowed" : "cursor-pointer")
+                    return "text-black font-semibold " + (isDisabled ? "cursor-not-allowed" : "cursor-pointer")
+                  })()
+                }`}
                   >
                     {habit.title}
                   </label>
@@ -514,27 +629,22 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
 
             {/* Weekly Progress Section */}
             <div className="px-3 py-2">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500">This week</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-orange-500 text-sm">🔥</span>
-                  <span className="text-gray-700 font-semibold text-sm">
-                    {habit.streak}
-                  </span>
-                </div>
-              </div>
-              
-              {/* 7-day progress boxes */}
+              {/* 7-day progress boxes (Sunday to Saturday) + Streak */}
               <div className="flex items-center justify-between">
-                <div className="flex gap-1">
+                <div className="flex gap-1.5">
                   {(() => {
                   const today = new Date();
+                  const todayDay = today.getDay(); // 0 = Sunday, 6 = Saturday
                   const days = [];
                   
-                  // Generate last 7 days
-                  for (let i = 6; i >= 0; i--) {
-                    const date = new Date(today);
-                    date.setDate(date.getDate() - i);
+                  // Calculate the start of the week (Sunday)
+                  const startOfWeek = new Date(today);
+                  startOfWeek.setDate(today.getDate() - todayDay);
+                  
+                  // Generate Sunday to Saturday
+                  for (let i = 0; i < 7; i++) {
+                    const date = new Date(startOfWeek);
+                    date.setDate(startOfWeek.getDate() + i);
                     const dateStr = formatLocalDateYYYYMMDD(date);
                     
                     // Check if habit was completed on this date
@@ -543,93 +653,122 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
                     );
                     
                     // Check if it's today
-                    const isToday = i === 0;
+                    const isToday = i === todayDay;
                     
+                    const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
                     const tooltipText = `${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}${isCompleted ? ' ✓' : ''}`
+                    
                     days.push(
-                      <div key={dateStr} className="relative group">
-                        <div
-                          className={`w-4 h-4 rounded ${
-                            isCompleted
-                              ? 'bg-green-500'
-                              : isToday
-                              ? 'bg-gray-300'
-                              : 'bg-gray-200'
-                          }`}
-                        />
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                          {tooltipText}
-                        </div>
-                      </div>
+                      <Tooltip key={dateStr}>
+                        <TooltipTrigger asChild>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-[9px] font-bold text-black/60">{dayNames[i]}</span>
+                            <div
+                              className={`w-5 h-5 rounded cursor-pointer transition-all ${
+                                isCompleted
+                                  ? getCompletedDayColor(habit.color || 'blue')
+                                  : isToday
+                                  ? 'bg-white border-2 border-black'
+                                  : 'bg-white/50'
+                              }`}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{tooltipText}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     );
                   }
                   
                   return days;
                 })()}
                 </div>
-                {habit.status === 'completed' && (
-                  <span className="ml-3 text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">Completed</span>
-                )}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className="relative">
+                      <img 
+                        src="/flames.png" 
+                        alt="Streak" 
+                        className={`w-6 h-6 drop-shadow-md transition-all ${
+                          streakPulse === habit._id 
+                            ? 'animate-[pulse_0.8s_ease-in-out] scale-125' 
+                            : ''
+                        }`}
+                        style={{
+                          filter: 'drop-shadow(0 0 8px rgba(255,100,0,0.4))'
+                        }}
+                      />
+                    </div>
+                    <span className="text-black font-semibold text-sm">
+                      {habit.streak}
+                    </span>
+                  </div>
+                  {habit.status === 'completed' && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-white text-black border-2 border-black font-semibold">Completed</span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Bottom Section - Category and Goal Link */}
-            <div className="flex items-center justify-between px-3 py-2 text-xs text-gray-600 border-t border-gray-100">
+            <div className="flex items-center justify-between px-3 py-2 text-xs text-black font-semibold border-t-2 border-black/30">
               {/* Left: Category */}
               <div className="flex items-center gap-2">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(habit.category)}`}>
                   {habit.category.charAt(0).toUpperCase() + habit.category.slice(1)}
                 </span>
-                <span className="text-gray-500">
+                <span className="text-black/70 font-semibold">
                   {getFrequencyText(habit.frequency)}
                 </span>
               </div>
-              {/* Right: Frequency (Heroicons) icon + Goal Link with mobile-friendly tooltips */}
+              {/* Right: Frequency (Heroicons) icon + Goal Link with tooltips */}
               <div className="flex items-center gap-3">
-                <div className="relative group">
-                  <button
-                    type="button"
-                    onClick={() => toggleFreqTooltip(habit._id)}
-                    className="text-gray-600 inline-flex items-center gap-1"
-                    aria-label="Frequency"
-                  >
-                    {habit.frequency === 'daily' && <ArrowPathIcon className="h-4 w-4" />}
-                    {habit.frequency === 'weekly' && (
-                      <span className="relative inline-flex items-center">
-                        <ArrowPathIcon className="h-4 w-4" />
-                        <span className="absolute -top-1 -right-1 text-[9px] bg-gray-100 text-gray-600 border border-gray-200 rounded px-0.5 leading-none">7</span>
-                      </span>
-                    )}
-                    {habit.frequency === 'monthly' && <CalendarIcon className="h-4 w-4" />}
-                  </button>
-                  <div
-                    className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap z-10 ${
-                      openFreqTips[habit._id] ? 'opacity-100' : 'opacity-0'
-                    } group-hover:opacity-100 transition-opacity duration-200`}
-                  >
-                    {getFrequencyText(habit.frequency)}
-                  </div>
-                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-black inline-flex items-center gap-1"
+                      aria-label="Frequency"
+                    >
+                      {habit.frequency === 'daily' && <ArrowPathIcon className="h-4 w-4" />}
+                      {habit.frequency === 'weekly' && (
+                        <span className="relative inline-flex items-center">
+                          <ArrowPathIcon className="h-4 w-4" />
+                          <span className="absolute -top-1 -right-1 text-[9px] bg-white text-black border-2 border-black rounded px-0.5 leading-none font-bold">{habit.days?.length ?? 0}</span>
+                        </span>
+                      )}
+                      {habit.frequency === 'monthly' && <CalendarIcon className="h-4 w-4" />}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{getFrequencyText(habit.frequency)}</p>
+                  </TooltipContent>
+                </Tooltip>
                 {habit.linkedGoalId && (
-                <div className="relative group">
-                  <div className="text-indigo-600 cursor-help">
-                    <Link className="h-3 w-3" />
-                  </div>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    {(() => {
-                      if (typeof habit.linkedGoalId === 'object' && habit.linkedGoalId && 'title' in habit.linkedGoalId) {
-                        const goal = habit.linkedGoalId as { title: string; isCompleted?: boolean };
-                        return `${goal.title}${goal.isCompleted ? ' ✓' : ''}`;
-                      }
-                      const goalId = typeof habit.linkedGoalId === 'string'
-                        ? habit.linkedGoalId
-                        : (habit.linkedGoalId as { _id: string })?._id;
-                      const linkedGoal = goals.find(g => g._id === goalId);
-                      return linkedGoal ? `${linkedGoal.title}${(linkedGoal as any).isCompleted ? ' ✓' : ''}` : 'Unknown Goal';
-                    })()}
-                  </div>
-                </div>
-              )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-indigo-600 cursor-help">
+                        <Link className="h-3 w-3" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {(() => {
+                          if (typeof habit.linkedGoalId === 'object' && habit.linkedGoalId && 'title' in habit.linkedGoalId) {
+                            const goal = habit.linkedGoalId as { title: string; isCompleted?: boolean };
+                            return `${goal.title}${goal.isCompleted ? ' ✓' : ''}`;
+                          }
+                          const goalId = typeof habit.linkedGoalId === 'string'
+                            ? habit.linkedGoalId
+                            : (habit.linkedGoalId as { _id: string })?._id;
+                          const linkedGoal = goals.find(g => g._id === goalId);
+                          return linkedGoal ? `${linkedGoal.title}${(linkedGoal as any).isCompleted ? ' ✓' : ''}` : 'Unknown Goal';
+                        })()}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
             </div>
           </div>
@@ -725,7 +864,8 @@ export default function HabitsSection({ showAddForm, setShowAddForm }: HabitsSec
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }
 

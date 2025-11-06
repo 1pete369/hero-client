@@ -15,6 +15,7 @@ export interface Habit {
   linkedGoalId: string | null | { _id: string; title?: string; isCompleted?: boolean }
   icon: string
   category: string
+  color?: "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray"
   isArchived: boolean
   status?: 'active' | 'completed' | 'cancelled'
   createdAt: string
@@ -28,6 +29,7 @@ export interface CreateHabitData {
   startDate: string
   icon?: string
   category: string
+  color?: "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray"
   linkedGoalId?: string
 }
 

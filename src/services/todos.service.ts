@@ -17,6 +17,10 @@ export interface Todo {
   color: "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray"
   googleCalendarEventId?: string | null
   syncedToCalendar?: boolean
+  // Timer fields
+  activeTimerStartedAt?: string | null
+  totalTimeMs?: number
+  timeSessions?: { startedAt: string; endedAt: string | null; durationMs: number }[]
   createdAt: string
   updatedAt: string
 }
@@ -84,6 +88,16 @@ export const deleteTodo = async (todoId: string): Promise<void> => {
 
 export const toggleTodoStatus = async (todoId: string): Promise<Todo> => {
   const response = await axiosAppInstance.patch(`${baseUrl}/${todoId}/toggle`)
+  return response.data
+}
+
+export const startTodoTimer = async (todoId: string): Promise<Todo> => {
+  const response = await axiosAppInstance.post(`${baseUrl}/${todoId}/timer/start`)
+  return response.data
+}
+
+export const stopTodoTimer = async (todoId: string): Promise<Todo> => {
+  const response = await axiosAppInstance.post(`${baseUrl}/${todoId}/timer/stop`)
   return response.data
 }
 

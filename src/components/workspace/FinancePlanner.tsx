@@ -1,382 +1,492 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { financeService, type Transaction } from "@/services/finance.service"
-import toast from "react-hot-toast"
+import { useState, useEffect } from "react";
+import {
+  DollarSign,
+  TrendingUp,
+  PiggyBank,
+  Shield,
+  Home,
+  Coffee,
+  Edit,
+  RefreshCw,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+  Lightbulb,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  financeService,
+  PlannerDashboard,
+  PlannerProfile,
+  formatCurrency,
+} from "@/services/finance.service";
+import toast from "react-hot-toast";
 
-type Split = {
-  investPct: number
-  sinkingPct: number
-  essentialsPct: number
-  discretionaryPct: number
+interface FinancePlannerProps {
+  className?: string;
 }
 
-type SinkingFund = { id: string; name: string; amount: number }
-type Caps = Record<string, number>
-
-type PlannerState = {
-  monthlyIncome: number
-  split: Split
-  sinkingFunds: SinkingFund[]
-  categoryCaps: Caps
-  emergencyFund: number
-  plannedInvestUsd: number
-  plannedSinkingUsd: number
-}
-
-const DEFAULT_CAP_CATEGORIES: string[] = [
-  "food",
-  "transportation",
-  "entertainment",
-  "shopping",
-  "bills",
-  "healthcare",
-  "education",
-  "travel",
-  "subscriptions",
-  "other_expense",
-]
-
-const STORAGE_KEY = "financePlannerSettings"
-
-export default function FinancePlanner() {
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    const d = new Date()
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    return `${y}-${m}`
-  })
-  const [monthTxns, setMonthTxns] = useState<Transaction[]>([])
-  const [nudge, setNudge] = useState<string>("")
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false)
-  const [state, setState] = useState<PlannerState>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (raw) return JSON.parse(raw) as PlannerState
-      } catch {}
-    }
-    return {
-      monthlyIncome: 4000,
-      split: { investPct: 25, sinkingPct: 10, essentialsPct: 55, discretionaryPct: 10 },
-      sinkingFunds: [
-        { id: crypto.randomUUID(), name: "Insurance", amount: 100 },
-        { id: crypto.randomUUID(), name: "Travel", amount: 150 },
-      ],
-      categoryCaps: DEFAULT_CAP_CATEGORIES.reduce<Caps>((acc, c) => { acc[c] = 0; return acc }, {}),
-      emergencyFund: 0,
-      plannedInvestUsd: 180,
-      plannedSinkingUsd: 105,
-    }
-  })
+export default function FinancePlanner({ className }: FinancePlannerProps) {
+  const [dashboard, setDashboard] = useState<PlannerDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState<string>("");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [weeklyCheckLoading, setWeeklyCheckLoading] = useState(false);
+  const [monthlyResetLoading, setMonthlyResetLoading] = useState(false);
+  
+  // Form state for profile editing
+  const [profileForm, setProfileForm] = useState({
+    incomeUsd: 0,
+    plannedInvestUsd: 0,
+    plannedSinkingUsd: 0,
+    emergencyFundUsd: 0,
+  });
 
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch {}
-  }, [state])
+    // Initialize to current month
+    const now = new Date();
+    const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    setCurrentMonth(monthStr);
+    loadDashboard(monthStr);
+  }, []);
 
-  const pctTotal = useMemo(() => state.split.investPct + state.split.sinkingPct + state.split.essentialsPct + state.split.discretionaryPct, [state.split])
-  const allocations = useMemo(() => {
-    const inc = state.monthlyIncome || 0
-    const toAmt = (p: number) => Math.round((inc * p) / 100)
-    return {
-      invest: toAmt(state.split.investPct),
-      sinking: toAmt(state.split.sinkingPct),
-      essentials: toAmt(state.split.essentialsPct),
-      discretionary: toAmt(state.split.discretionaryPct),
+  const loadDashboard = async (month: string) => {
+    try {
+      setLoading(true);
+      const data = await financeService.getPlannerDashboard(month);
+      setDashboard(data);
+      
+      // Update form state
+      setProfileForm({
+        incomeUsd: data.profile.incomeUsd,
+        plannedInvestUsd: data.profile.plannedInvestUsd,
+        plannedSinkingUsd: data.profile.plannedSinkingUsd,
+        emergencyFundUsd: data.profile.emergencyFundUsd,
+      });
+    } catch (error: any) {
+      console.error("Error loading planner dashboard:", error);
+      if (error.response?.status === 404) {
+        toast.error("Set up your planner profile first");
+        setEditingProfile(true);
+      } else {
+        toast.error("Failed to load planner dashboard");
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [state.monthlyIncome, state.split])
+  };
 
-  // Sinking table helpers
-  const sinkingTotal = useMemo(() => state.sinkingFunds.reduce((s, f) => s + (Number(f.amount) || 0), 0), [state.sinkingFunds])
-  const addSinkingFund = () => setState((p) => ({ ...p, sinkingFunds: [...p.sinkingFunds, { id: crypto.randomUUID(), name: "New Fund", amount: 0 }] }))
-  const removeSinkingFund = (id: string) => setState((p) => ({ ...p, sinkingFunds: p.sinkingFunds.filter(f => f.id !== id) }))
+  const handleSaveProfile = async () => {
+    try {
+      await financeService.updatePlannerProfile(profileForm);
+      toast.success("Profile updated successfully");
+      setEditingProfile(false);
+      loadDashboard(currentMonth);
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
+    }
+  };
 
-  // Load month transactions (list view drives actuals)
-  const monthEnd = useMemo(() => { const [y,m] = selectedMonth.split('-').map(Number); return new Date(y, m, 0) }, [selectedMonth])
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const startISO = `${selectedMonth}-01`
-        const endISO = `${selectedMonth}-${String(monthEnd.getDate()).padStart(2,'0')}`
-        const { transactions } = await financeService.getTransactions({ startDate: startISO, endDate: endISO, limit: 1000 })
-        setMonthTxns(transactions)
-      } catch (e) {
-        console.error(e)
-        toast.error('Failed to load monthly transactions')
-        setMonthTxns([])
+  const handleWeeklyCheck = async () => {
+    try {
+      setWeeklyCheckLoading(true);
+      const result = await financeService.weeklyCheck(currentMonth);
+      toast.success(result.suggestion, { duration: 6000 });
+      loadDashboard(currentMonth);
+    } catch (error: any) {
+      console.error("Error running weekly check:", error);
+      toast.error("Failed to run weekly check");
+    } finally {
+      setWeeklyCheckLoading(false);
+    }
+  };
+
+  const handleMonthlyReset = async () => {
+    try {
+      setMonthlyResetLoading(true);
+      const result = await financeService.monthlyReset(currentMonth);
+      
+      // Show checklist
+      const checklistHtml = result.checklist.map((item, idx) => `${idx + 1}. ${item}`).join("\n");
+      toast.success(`Monthly Reset Complete!\n\nNext Month: ${result.nextMonth}\n\nChecklist:\n${checklistHtml}`, {
+        duration: 10000,
+      });
+      
+      // Move to next month
+      setCurrentMonth(result.nextMonth);
+      loadDashboard(result.nextMonth);
+    } catch (error: any) {
+      console.error("Error running monthly reset:", error);
+      toast.error("Failed to run monthly reset");
+    } finally {
+      setMonthlyResetLoading(false);
+    }
+  };
+
+  const navigateMonth = (direction: "prev" | "next") => {
+    const [year, month] = currentMonth.split("-").map(Number);
+    let newYear = year;
+    let newMonth = month;
+    
+    if (direction === "prev") {
+      newMonth -= 1;
+      if (newMonth < 1) {
+        newMonth = 12;
+        newYear -= 1;
+      }
+    } else {
+      newMonth += 1;
+      if (newMonth > 12) {
+        newMonth = 1;
+        newYear += 1;
       }
     }
-    load()
-  }, [selectedMonth, monthEnd])
+    
+    const newMonthStr = `${newYear}-${String(newMonth).padStart(2, "0")}`;
+    setCurrentMonth(newMonthStr);
+    loadDashboard(newMonthStr);
+  };
 
-  // Bucket mapping (simple)
-  const DISCRETIONARY = new Set(["entertainment","shopping","travel","subscriptions","other_expense"]) as Set<string>
-  const totals = useMemo(() => {
-    const sum = { INVEST: 0, SINKING: 0, ESSENTIALS: 0, DISCRETIONARY: 0 }
-    for (const t of monthTxns) {
-      if (t.type !== 'expense') continue
-      const cat = (t.category || '').toLowerCase()
-      if (DISCRETIONARY.has(cat)) sum.DISCRETIONARY += t.amount
-      else sum.ESSENTIALS += t.amount
+  const getIndicatorColor = (indicator: string) => {
+    switch (indicator) {
+      case "green": return "text-green-600 bg-green-50";
+      case "yellow": return "text-yellow-600 bg-yellow-50";
+      case "red": return "text-red-600 bg-red-50";
+      default: return "text-gray-600 bg-gray-50";
     }
-    return sum
-  }, [monthTxns])
+  };
 
-  // Caps (USD)
-  const caps = useMemo(() => ({
-    INVEST: Math.round((state.split.investPct / 100) * state.monthlyIncome),
-    SINKING: Math.round((state.split.sinkingPct / 100) * state.monthlyIncome),
-    ESSENTIALS: Math.round((state.split.essentialsPct / 100) * state.monthlyIncome),
-    DISCRETIONARY: Math.round((state.split.discretionaryPct / 100) * state.monthlyIncome),
-  }), [state.split, state.monthlyIncome])
-
-  // Actuals (Invest/Sinking include planned transfers for KPI purposes)
-  const actuals = useMemo(() => ({
-    INVEST: totals.INVEST + (state.plannedInvestUsd || 0),
-    SINKING: totals.SINKING + (state.plannedSinkingUsd || 0),
-    ESSENTIALS: totals.ESSENTIALS,
-    DISCRETIONARY: totals.DISCRETIONARY,
-  }), [totals, state.plannedInvestUsd, state.plannedSinkingUsd])
-
-  // KPIs
-  const savingsRate = useMemo(() => (state.monthlyIncome ? (actuals.INVEST + actuals.SINKING) / state.monthlyIncome : 0), [actuals, state.monthlyIncome])
-  const essentialsShare = useMemo(() => (state.monthlyIncome ? (actuals.ESSENTIALS / state.monthlyIncome) : 0), [actuals, state.monthlyIncome])
-  const avgMonthlyExpenses = useMemo(() => actuals.ESSENTIALS + actuals.DISCRETIONARY, [actuals])
-  const runway = useMemo(() => (avgMonthlyExpenses > 0 ? state.emergencyFund / avgMonthlyExpenses : null), [state.emergencyFund, avgMonthlyExpenses])
-
-  const colorForMin = (v: number, min: number) => (v >= min ? 'bg-green-600' : v >= (min - 0.05) ? 'bg-yellow-500' : 'bg-red-600')
-  const colorForMax = (v: number, max: number) => (v <= max ? 'bg-green-600' : v <= (max + 0.05) ? 'bg-yellow-500' : 'bg-red-600')
-
-  // Weekly Check button
-  const runWeeklyCheck = () => {
-    const breaches = [
-      { key: 'INVEST' as const },
-      { key: 'SINKING' as const },
-      { key: 'ESSENTIALS' as const },
-      { key: 'DISCRETIONARY' as const },
-    ].filter(({ key }) => actuals[key] > caps[key])
-
-    if (breaches.length === 0) {
-      setNudge("On track. Roll surplus into Investments (‘No Zero Days’).")
-      toast.success('On track this week')
-      return
+  const getBarColor = (indicator: string) => {
+    switch (indicator) {
+      case "green": return "bg-green-500";
+      case "yellow": return "bg-yellow-500";
+      case "red": return "bg-red-500";
+      default: return "bg-gray-500";
     }
-    const largest = breaches.sort((a,b)=> (actuals[b.key]-caps[b.key]) - (actuals[a.key]-caps[a.key]))[0]
-    const entries = monthTxns.filter(t=> t.type==='expense').map(t=> ({ cat: t.category, amt: t.amount, bucket: DISCRETIONARY.has((t.category||'').toLowerCase()) ? 'DISCRETIONARY' : 'ESSENTIALS' as const }))
-    const filtered = entries.filter(e=> e.bucket === largest.key)
-    const top = filtered.sort((a,b)=> b.amt-a.amt)[0]
-    const catName = top?.cat || (largest.key === 'DISCRETIONARY' ? 'Discretionary' : 'Essentials')
-    const delta = Math.max(0, Math.round(actuals[largest.key] - caps[largest.key]))
-    setNudge(`Cut ${catName} by $${Math.min(Math.max(delta, 40), 100)} next week to move ${largest.key} toward cap; redirect to Invest.`)
-    toast.error('Over cap — suggestion added')
+  };
+
+  const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+  if (loading) {
+    return (
+      <div className={`space-y-6 ${className}`}>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading planner...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  // Monthly Reset button
-  const runMonthlyReset = () => {
-    const [y,m] = selectedMonth.split('-').map(Number)
-    const next = new Date(y, m-1, 1)
-    next.setMonth(next.getMonth()+1)
-    const nextKey = `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`
-    try {
-      localStorage.setItem(`${STORAGE_KEY}:${nextKey}`, JSON.stringify({ ...state }))
-      toast.success(`Next month (${nextKey}) preloaded`)
-    } catch {
-      toast.error('Failed to preload next month')
-    }
+  if (editingProfile || !dashboard) {
+    return (
+      <div className={`space-y-6 p-4 ${className}`}>
+        <Card className="rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold">Setup Your Budget</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="income">Monthly Income ($)</Label>
+              <Input
+                id="income"
+                type="number"
+                value={profileForm.incomeUsd}
+                onChange={(e) => setProfileForm({ ...profileForm, incomeUsd: Number(e.target.value) })}
+                className="mt-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="plannedInvest">Planned Investment Transfer ($/month)</Label>
+              <Input
+                id="plannedInvest"
+                type="number"
+                value={profileForm.plannedInvestUsd}
+                onChange={(e) => setProfileForm({ ...profileForm, plannedInvestUsd: Number(e.target.value) })}
+                className="mt-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="plannedSinking">Planned Sinking Fund Transfer ($/month)</Label>
+              <Input
+                id="plannedSinking"
+                type="number"
+                value={profileForm.plannedSinkingUsd}
+                onChange={(e) => setProfileForm({ ...profileForm, plannedSinkingUsd: Number(e.target.value) })}
+                className="mt-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="emergencyFund">Emergency Fund Balance ($)</Label>
+              <Input
+                id="emergencyFund"
+                type="number"
+                value={profileForm.emergencyFundUsd}
+                onChange={(e) => setProfileForm({ ...profileForm, emergencyFundUsd: Number(e.target.value) })}
+                className="mt-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSaveProfile}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+              >
+                Save Profile
+              </Button>
+              {dashboard && (
+                <Button
+                  onClick={() => setEditingProfile(false)}
+                  variant="outline"
+                  className="flex-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 overflow-y-auto scrollbar-hide p-4 ${className}`}>
       {/* Top Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-end gap-2">
-        <div>
-          <label className="text-xs text-gray-600">Month</label>
-          <Input type="month" value={selectedMonth} onChange={(e)=> setSelectedMonth(e.target.value)} className="mt-1 w-[180px] border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]" />
-        </div>
-        <div className="flex-1 grid grid-cols-3 gap-2">
-          <div className="flex items-center gap-2 px-2 py-1 rounded border-3 border-black">
-            <span className={`inline-block h-2.5 w-2.5 rounded-full ${colorForMin(savingsRate, 0.35)}`}></span>
-            <span className="text-xs">Savings {Math.round(savingsRate*100)}%</span>
-          </div>
-          <div className="flex items-center gap-2 px-2 py-1 rounded border-3 border-black">
-            <span className={`inline-block h-2.5 w-2.5 rounded-full ${colorForMax(essentialsShare, 0.55)}`}></span>
-            <span className="text-xs">Essentials {Math.round(essentialsShare*100)}%</span>
-          </div>
-          <div className="flex items-center gap-2 px-2 py-1 rounded border-3 border-black">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-600"></span>
-            <span className="text-xs">Runway {runway === null ? '—' : `${runway.toFixed(1)} mo`}</span>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs text-gray-600">Income ($)</label>
-          <Input type="number" min={0} value={state.monthlyIncome} onChange={(e)=> setState(p=>({ ...p, monthlyIncome: Number(e.target.value||0) }))} className="mt-1 w-[140px] border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]" />
-        </div>
-      </div>
-
-      {/* Split + Income Table */}
-      <div className="bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-3">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-semibold text-gray-900">Budget Planner</h3>
-          <Badge className={`text-xs ${pctTotal === 100 ? "bg-green-600" : "bg-red-600"}`}>{pctTotal}%</Badge>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 items-end">
-          <div className="col-span-2 md:col-span-2">
-            <label className="text-xs text-gray-600">Monthly Income ($)</label>
-            <Input type="number" min={0} value={state.monthlyIncome} onChange={(e)=> setState(p=>({ ...p, monthlyIncome: Number(e.target.value||0) }))} className="mt-1 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]" />
-          </div>
-          {([
-            ["Invest (25%)", "investPct"],
-            ["Sinking (10%)", "sinkingPct"],
-            ["Essentials (55%)", "essentialsPct"],
-            ["Discretionary (10%)", "discretionaryPct"],
-          ] as const).map(([label, key]) => (
-            <div key={key}>
-              <label className="text-xs text-gray-600">{label}</label>
-              <div className="flex items-center gap-2 mt-1">
-                <Input type="number" min={0} max={100} value={state.split[key]} onChange={(e)=> setState(p=>({ ...p, split: { ...p.split, [key]: Number(e.target.value||0) } }))} className="border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] w-20" />
-                <span className="text-xs text-gray-500 whitespace-nowrap">
-                  ${ key === "investPct" ? allocations.invest : key === "sinkingPct" ? allocations.sinking : key === "essentialsPct" ? allocations.essentials : allocations.discretionary }
-                </span>
-              </div>
+      <div className="bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigateMonth("prev")}
+              className="p-2 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+              <span className="text-lg font-bold">
+                {new Date(currentMonth + "-01").toLocaleDateString("en-US", { 
+                  month: "long", 
+                  year: "numeric" 
+                })}
+              </span>
             </div>
-          ))}
-        </div>
-        {/* Planned transfers inline */}
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          <div>
-            <label className="text-xs text-gray-600">Planned Invest ($)</label>
-            <Input type="number" min={0} value={state.plannedInvestUsd} onChange={(e)=> setState(p=>({ ...p, plannedInvestUsd: Number(e.target.value||0) }))} className="mt-1 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]" />
+            
+            <button
+              onClick={() => navigateMonth("next")}
+              className="p-2 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-          <div>
-            <label className="text-xs text-gray-600">Planned Sinking ($)</label>
-            <Input type="number" min={0} value={state.plannedSinkingUsd} onChange={(e)=> setState(p=>({ ...p, plannedSinkingUsd: Number(e.target.value||0) }))} className="mt-1 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]" />
-          </div>
-        </div>
-        {pctTotal !== 100 && <p className="text-xs text-red-600 mt-2">The split must add up to 100%.</p>}
-      </div>
-
-      {/* Sinking Funds */}
-      <div className="bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-3" id="sinking-section">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-semibold text-gray-900">Sinking Funds</h3>
+          
           <div className="flex items-center gap-2">
-            <Badge className={`text-xs ${sinkingTotal <= allocations.sinking ? "bg-green-600" : "bg-red-600"}`}>Planned ${sinkingTotal} / Target ${allocations.sinking}</Badge>
-            <Button type="button" onClick={addSinkingFund} className="h-8 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]">Add Row</Button>
+            <DollarSign className="h-5 w-5 text-green-600" />
+            <span className="text-xl font-bold text-gray-900">
+              {formatCurrency(dashboard.profile.incomeUsd)}
+            </span>
+            <button
+              onClick={() => setEditingProfile(true)}
+              className="ml-2 p-2 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+            >
+              <Edit className="h-4 w-4" />
+            </button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-600">
-                <th className="py-2">Name</th>
-                <th className="py-2 w-40">Monthly Amount ($)</th>
-                <th className="py-2 w-24"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.sinkingFunds.map((fund) => (
-                <tr key={fund.id} className="border-t">
-                  <td className="py-2 pr-2">
-                    <Input value={fund.name} onChange={(e)=> setState(p=>({ ...p, sinkingFunds: p.sinkingFunds.map(f=> f.id===fund.id ? { ...f, name: e.target.value } : f) }))} className="border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]" />
-                  </td>
-                  <td className="py-2 pr-2">
-                    <Input type="number" min={0} value={fund.amount} onChange={(e)=> setState(p=>({ ...p, sinkingFunds: p.sinkingFunds.map(f=> f.id===fund.id ? { ...f, amount: Number(e.target.value||0) } : f) }))} className="border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]" />
-                  </td>
-                  <td className="py-2">
-                    <Button type="button" variant="outline" onClick={()=> removeSinkingFund(fund.id)} className="h-8 w-full border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]">Remove</Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        
+        {/* Status Pills */}
+        <div className="flex gap-2 flex-wrap">
+          <Badge className={`${getIndicatorColor(dashboard.kpis.savingsRate.indicator)} border-2 border-black px-3 py-1`}>
+            Savings: {formatPercent(dashboard.kpis.savingsRate.value)}
+          </Badge>
+          <Badge className={`${getIndicatorColor(dashboard.kpis.essentialsShare.indicator)} border-2 border-black px-3 py-1`}>
+            Essentials: {formatPercent(dashboard.kpis.essentialsShare.value)}
+          </Badge>
+          <Badge className="bg-blue-50 text-blue-600 border-2 border-black px-3 py-1">
+            Runway: {dashboard.kpis.runway.value !== null 
+              ? `${dashboard.kpis.runway.value.toFixed(1)} mo` 
+              : "—"}
+          </Badge>
         </div>
       </div>
 
-      {/* KPIs + Advanced toggle */}
-      <div className="bg-white rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-3">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-semibold">KPIs</h4>
-          <Button type="button" variant="outline" onClick={()=> setShowAdvanced(v=>!v)} className="h-8 px-2 text-xs border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]">
-            {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="p-2 rounded border-3 border-black bg-gray-50">
-            <div className="text-xs text-gray-600">Savings rate</div>
-            <div className="text-base font-semibold flex items-center gap-2">
-              <span className={`inline-block h-2.5 w-2.5 rounded-full ${colorForMin(savingsRate, 0.35)}`}></span>
-              {Math.round(savingsRate*100)}%
-            </div>
-          </div>
-          <div className="p-2 rounded border-3 border-black bg-gray-50">
-            <div className="text-xs text-gray-600">Essentials share</div>
-            <div className="text-base font-semibold flex items-center gap-2">
-              <span className={`inline-block h-2.5 w-2.5 rounded-full ${colorForMax(essentialsShare, 0.55)}`}></span>
-              {Math.round(essentialsShare*100)}%
-            </div>
-          </div>
-          <div className="p-2 rounded border-3 border-black bg-gray-50">
-            <div className="text-xs text-gray-600">Emergency Fund ($)</div>
-            <Input type="number" min={0} value={state.emergencyFund} onChange={(e)=> setState(p=>({ ...p, emergencyFund: Number(e.target.value||0) }))} className="mt-1 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]" />
-          </div>
-          <div className="p-2 rounded border-3 border-black bg-gray-50">
-            <div className="text-xs text-gray-600">Runway</div>
-            <div className="text-base font-semibold">{runway === null ? '—' : `${runway.toFixed(1)} mo`}</div>
-          </div>
-        </div>
-        <div className="text-[10px] text-gray-600 mt-2">Targets: Savings ≥35%, Essentials ≤55%</div>
-        {showAdvanced && (
-          <div className="mt-4 space-y-4">
-            {/* Category Caps */}
+      {/* KPIs Card */}
+      <Card className="rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-indigo-600" />
+            Key Performance Indicators
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded border-2 border-black">
             <div>
-              <h5 className="text-sm font-semibold mb-2">Expense Category Caps</h5>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {DEFAULT_CAP_CATEGORIES.map((cat) => (
-                  <div key={cat}>
-                    <label className="text-xs text-gray-600 capitalize">{cat.replace("_"," ")}</label>
-                    <Input type="number" min={0} value={state.categoryCaps[cat] || 0} onChange={(e)=> setState(p=>({ ...p, categoryCaps: { ...p.categoryCaps, [cat]: Number(e.target.value||0) } }))} className="mt-1 border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)]" />
-                  </div>
-                ))}
-              </div>
+              <p className="text-sm font-medium text-gray-700">Savings Rate</p>
+              <p className="text-xs text-gray-500">Target: ≥35%</p>
             </div>
-            {/* Caps vs Actuals */}
-            <div>
-              <h5 className="text-sm font-semibold mb-2">Caps vs Actuals</h5>
-              {([['INVEST','Invest'],['SINKING','Sinking'],['ESSENTIALS','Essentials'],['DISCRETIONARY','Discretionary']] as const).map(([key,label])=>{
-                const cap = caps[key]
-                const act = actuals[key]
-                const ratio = cap ? Math.min(act/cap, 1.25) : 0
-                return (
-                  <div key={key} className="mb-3">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span>{label}</span>
-                      <span>${act} / ${cap}</span>
-                    </div>
-                    <div className="h-4 bg-gray-100 border border-gray-300 rounded relative" title={`Actual $${act} / Cap $${cap} (Δ $${act-cap})`}>
-                      <div className={`h-4 ${act > cap ? 'bg-red-500' : (act >= cap * 0.95 ? 'bg-yellow-400' : 'bg-green-500')} rounded`} style={{ width: `${Math.min(100, Math.round(ratio*100))}%` }}></div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            {/* Coach */}
-            <div className="flex flex-col">
-              <h5 className="text-sm font-semibold mb-2">Coach</h5>
-              <p className="text-sm text-gray-800 min-h-[32px]">{nudge || 'Tap Weekly Check for a suggestion.'}</p>
-              <div className="mt-2 flex gap-2">
-                <Button type="button" onClick={runWeeklyCheck} className="border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] h-8 px-3 text-xs">Weekly Check</Button>
-                <Button type="button" variant="outline" onClick={runMonthlyReset} className="border-3 border-black rounded shadow-[3px_3px_0_0_rgba(0,0,0,1)] h-8 px-3 text-xs">Monthly Reset</Button>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold">{formatPercent(dashboard.kpis.savingsRate.value)}</span>
+              <span className={`px-2 py-1 rounded text-sm font-medium ${getIndicatorColor(dashboard.kpis.savingsRate.indicator)}`}>
+                {dashboard.kpis.savingsRate.indicator === "green" ? "✓" : dashboard.kpis.savingsRate.indicator === "yellow" ? "!" : "✗"}
+              </span>
             </div>
           </div>
-        )}
-      </div>
-      {/* (Advanced content moved above) */}
+          
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded border-2 border-black">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Essentials Share</p>
+              <p className="text-xs text-gray-500">Target: ≤55%</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold">{formatPercent(dashboard.kpis.essentialsShare.value)}</span>
+              <span className={`px-2 py-1 rounded text-sm font-medium ${getIndicatorColor(dashboard.kpis.essentialsShare.indicator)}`}>
+                {dashboard.kpis.essentialsShare.indicator === "green" ? "✓" : dashboard.kpis.essentialsShare.indicator === "yellow" ? "!" : "✗"}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded border-2 border-black">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Runway (Emergency Fund)</p>
+              <p className="text-xs text-gray-500">Target: 6-12 months</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold">
+                {dashboard.kpis.runway.value !== null 
+                  ? `${dashboard.kpis.runway.value.toFixed(1)} mo` 
+                  : "—"}
+              </span>
+            </div>
+          </div>
+          
+          <p className="text-xs text-gray-500 text-center pt-2">
+            Targets: Savings ≥35%, Essentials ≤55%
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Caps vs Actuals Card */}
+      <Card className="rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <PiggyBank className="h-5 w-5 text-indigo-600" />
+            Budget Caps vs Actuals
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {dashboard.drifts.map((drift) => {
+            const percentage = drift.cap > 0 ? (drift.actual / drift.cap) * 100 : 0;
+            const icon = drift.bucket === "INVEST" ? TrendingUp 
+              : drift.bucket === "SINKING" ? Shield 
+              : drift.bucket === "ESSENTIALS" ? Home 
+              : Coffee;
+            const Icon = icon;
+            
+            return (
+              <div key={drift.bucket} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm font-medium">{drift.bucket}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-bold">
+                      {formatCurrency(drift.actual)} / {formatCurrency(drift.cap)}
+                    </span>
+                    {drift.delta !== 0 && (
+                      <span className={`ml-2 text-xs ${drift.breached ? 'text-red-600' : 'text-green-600'}`}>
+                        {drift.breached ? '+' : ''}{formatCurrency(drift.delta)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="relative h-6 bg-gray-200 rounded border-2 border-black overflow-hidden">
+                  <div
+                    className={`h-full ${getBarColor(drift.indicator)} transition-all duration-300`}
+                    style={{ width: `${Math.min(percentage, 100)}%` }}
+                  />
+                  {percentage > 100 && (
+                    <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                      {percentage.toFixed(0)}%
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {/* Coach/Nudge Card */}
+      <Card className="rounded border-3 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] bg-gradient-to-r from-indigo-50 to-purple-50">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-yellow-500" />
+            Smart Coach
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-white rounded border-2 border-black">
+            {dashboard.drifts.some(d => d.breached) ? (
+              <AlertCircle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1">
+              <p className="text-sm text-gray-700">
+                {dashboard.drifts.some(d => d.breached)
+                  ? "Some buckets are over budget. Run a weekly check for specific suggestions."
+                  : "✨ On track! Roll any surplus to Investments ('No Zero Days')."}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              onClick={handleWeeklyCheck}
+              disabled={weeklyCheckLoading}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+            >
+              {weeklyCheckLoading ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              )}
+              Weekly Check
+            </Button>
+            
+            <Button
+              onClick={handleMonthlyReset}
+              disabled={monthlyResetLoading}
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+            >
+              {monthlyResetLoading ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Calendar className="h-4 w-4 mr-2" />
+              )}
+              Monthly Reset
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
-  )
+  );
 }
-
 

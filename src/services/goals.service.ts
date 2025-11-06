@@ -12,6 +12,7 @@ export interface Goal {
   linkedHabits: string[]
   priority: "low" | "medium" | "high"
   category: string
+  color?: "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray"
   missedDays: number
   currentStreak: number
   longestStreak: number
@@ -25,6 +26,7 @@ export interface CreateGoalData {
   targetDate: string
   priority?: "low" | "medium" | "high"
   category?: string
+  color?: "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray"
   linkedHabits?: string[]
 }
 
@@ -37,6 +39,7 @@ export interface UpdateGoalData {
   progress?: number
   priority?: "low" | "medium" | "high"
   category?: string
+  color?: "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray"
   linkedHabits?: string[]
 }
 

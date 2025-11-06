@@ -4,6 +4,8 @@ export {
   updateTodo,
   deleteTodo,
   toggleTodoStatus,
+  startTodoTimer,
+  stopTodoTimer,
   getCalendarSyncStatus,
   toggleCalendarSync,
   syncTodoToCalendar,
@@ -33,5 +35,12 @@ export {
   type CreateGoalData,
   type UpdateGoalData,
 } from "./goals.service"
+
+export {
+  completeOnboarding,
+  getOnboardingStatus,
+  type OnboardingData,
+  type OnboardingStatus,
+} from "./onboarding.service"
 
 

@@ -64,6 +64,117 @@ export interface PaginatedTransactions {
   };
 }
 
+// Financial Planner Types
+export interface SinkingLine {
+  name: string;
+  amountUsd: number;
+}
+
+export interface PlannerProfile {
+  _id: string;
+  userId: string;
+  incomeUsd: number;
+  caps: {
+    INVEST: number;
+    SINKING: number;
+    ESSENTIALS: number;
+    DISCRETIONARY: number;
+  };
+  plannedInvestUsd: number;
+  plannedSinkingUsd: number;
+  sinkingLines: SinkingLine[];
+  emergencyFundUsd: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdatePlannerProfileData {
+  incomeUsd?: number;
+  caps?: {
+    INVEST?: number;
+    SINKING?: number;
+    ESSENTIALS?: number;
+    DISCRETIONARY?: number;
+  };
+  plannedInvestUsd?: number;
+  plannedSinkingUsd?: number;
+  sinkingLines?: SinkingLine[];
+  emergencyFundUsd?: number;
+}
+
+export interface PlannerDashboard {
+  profile: PlannerProfile;
+  month: string;
+  totals: {
+    INVEST: number;
+    SINKING: number;
+    ESSENTIALS: number;
+    DISCRETIONARY: number;
+  };
+  subcategoryTotals: {
+    [bucket: string]: {
+      [category: string]: number;
+    };
+  };
+  caps: {
+    INVEST: number;
+    SINKING: number;
+    ESSENTIALS: number;
+    DISCRETIONARY: number;
+  };
+  kpis: {
+    savingsRate: {
+      value: number;
+      target: number;
+      indicator: "green" | "yellow" | "red";
+    };
+    essentialsShare: {
+      value: number;
+      target: number;
+      indicator: "green" | "yellow" | "red";
+    };
+    runway: {
+      value: number | null;
+      indicator: "neutral";
+    };
+  };
+  drifts: Array<{
+    bucket: string;
+    cap: number;
+    actual: number;
+    delta: number;
+    breached: boolean;
+    indicator: "green" | "yellow" | "red";
+  }>;
+}
+
+export interface WeeklyCheckResult {
+  suggestion: string;
+  breached: boolean;
+  details?: {
+    bucket: string;
+    category: string;
+    currentAmount: number;
+    suggestedCut: number;
+  };
+}
+
+export interface MonthlyResetResult {
+  nextMonth: string;
+  checklist: string[];
+  caps: {
+    INVEST: number;
+    SINKING: number;
+    ESSENTIALS: number;
+    DISCRETIONARY: number;
+  };
+  plannedTransfers: {
+    invest: number;
+    sinking: number;
+  };
+  sinkingLines: SinkingLine[];
+}
+
 export const financeService = {
   // Get all transactions with optional filters
   getTransactions: async (filters: TransactionFilters = {}): Promise<PaginatedTransactions> => {
@@ -111,6 +222,40 @@ export const financeService = {
     const response = await axiosAppInstance.get(`/finance/summary?${params.toString()}`);
     return response.data;
   },
+
+  // Financial Planner APIs
+  getPlannerProfile: async (): Promise<PlannerProfile> => {
+    const response = await axiosAppInstance.get("/finance-planner/profile");
+    return response.data;
+  },
+
+  updatePlannerProfile: async (data: UpdatePlannerProfileData): Promise<PlannerProfile> => {
+    const response = await axiosAppInstance.put("/finance-planner/profile", data);
+    return response.data;
+  },
+
+  getPlannerDashboard: async (month?: string): Promise<PlannerDashboard> => {
+    const params = new URLSearchParams();
+    if (month) params.append("month", month);
+
+    const response = await axiosAppInstance.get(`/finance-planner/dashboard?${params.toString()}`);
+    return response.data;
+  },
+
+  weeklyCheck: async (month?: string): Promise<WeeklyCheckResult> => {
+    const params = new URLSearchParams();
+    if (month) params.append("month", month);
+
+    const response = await axiosAppInstance.get(`/finance-planner/weekly-check?${params.toString()}`);
+    return response.data;
+  },
+
+  monthlyReset: async (currentMonth?: string): Promise<MonthlyResetResult> => {
+    const response = await axiosAppInstance.post("/finance-planner/monthly-reset", {
+      currentMonth,
+    });
+    return response.data;
+  },
 };
 
 // Category options for the UI
@@ -143,9 +288,9 @@ export const ALL_CATEGORIES = {
 
 // Utility functions
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "INR",
+    currency: "USD",
   }).format(amount);
 };
 

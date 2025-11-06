@@ -28,8 +28,8 @@ export default function Navbar() {
     return null
   }
 
-  if (pathname.startsWith("/chat") || pathname.startsWith("/workspace")) {
-    return <div className="hidden"></div>
+  if (pathname.startsWith("/chat") || pathname.startsWith("/workspace") || pathname.startsWith("/onboarding")) {
+    return null
   }
 
   if (["/login", "/signup"].some((route) => pathname.startsWith(route))) {

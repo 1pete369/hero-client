@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import confetti from "canvas-confetti"
+import { triggerCompletionCelebration } from "@/lib/utils"
 import {
   CheckCircle,
   Edit,
@@ -44,6 +46,8 @@ import {
   updateTodo,
   deleteTodo,
   toggleTodoStatus,
+  startTodoTimer,
+  stopTodoTimer,
   getCalendarSyncStatus,
   toggleCalendarSync,
   syncAllTodosToCalendar,
@@ -67,16 +71,16 @@ const formatTo12Hour = (time24: string): string => {
 // Color utility function
 const getTodoColorClasses = (color: string) => {
   const colorMap = {
-    blue: "bg-blue-50 text-blue-900",
-    green: "bg-green-50 text-green-900",
-    purple: "bg-purple-50 text-purple-900",
-    orange: "bg-orange-50 text-orange-900",
-    red: "bg-red-50 text-red-900",
-    pink: "bg-pink-50 text-pink-900",
-    indigo: "bg-indigo-50 text-indigo-900",
-    teal: "bg-teal-50 text-teal-900",
-    yellow: "bg-yellow-50 text-yellow-900",
-    gray: "bg-gray-50 text-gray-900",
+    blue: "bg-blue-400 text-black",
+    green: "bg-green-400 text-black",
+    purple: "bg-purple-400 text-black",
+    orange: "bg-orange-400 text-black",
+    red: "bg-red-400 text-black",
+    pink: "bg-pink-400 text-black",
+    indigo: "bg-indigo-400 text-black",
+    teal: "bg-teal-400 text-black",
+    yellow: "bg-yellow-300 text-black",
+    gray: "bg-gray-400 text-black",
   }
   return colorMap[color as keyof typeof colorMap] || colorMap.blue
 }
@@ -84,25 +88,25 @@ const getTodoColorClasses = (color: string) => {
 // Checkbox color utility to match todo color
 const getCheckboxColorClasses = (color: string) => {
   const map: Record<string, string> = {
-    blue: "border-blue-500 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500",
-    green: "border-green-500 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500",
-    purple: "border-purple-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500",
-    orange: "border-orange-500 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500",
-    red: "border-red-500 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500",
-    pink: "border-pink-500 data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500",
-    indigo: "border-indigo-500 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500",
-    teal: "border-teal-500 data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500",
-    yellow: "border-yellow-500 data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500",
-    gray: "border-gray-500 data-[state=checked]:bg-gray-500 data-[state=checked]:border-gray-500",
+    blue: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
+    green: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
+    purple: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
+    orange: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
+    red: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
+    pink: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
+    indigo: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
+    teal: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
+    yellow: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
+    gray: "border-black data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white",
   }
   return map[color] || map.blue
 }
 
 // Priority badge styling
 const getPriorityBadgeClasses = (priority: "low" | "medium" | "high") => {
-  if (priority === "high") return "bg-red-100 text-red-700 border border-red-200"
-  if (priority === "medium") return "bg-yellow-100 text-yellow-700 border border-yellow-200"
-  return "bg-green-100 text-green-700 border border-green-200"
+  if (priority === "high") return "bg-white text-red-600 border-2 border-black font-semibold"
+  if (priority === "medium") return "bg-white text-yellow-600 border-2 border-black font-semibold"
+  return "bg-white text-green-600 border-2 border-black font-semibold"
 }
 
 
@@ -174,6 +178,7 @@ export default function TodosSection({
   onShowTimeline,
   refreshTrigger,
 }: TodosSectionProps) {
+  const SHOW_TODO_TIMER = false
   // Get today's date in local timezone to avoid UTC conversion issues
   const getTodayISO = () => {
     const today = new Date()
@@ -204,6 +209,11 @@ export default function TodosSection({
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [calendarSyncStatus, setCalendarSyncStatus] = useState<CalendarSyncStatus | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
+  // force re-render each second for live timers
+  useEffect(() => {
+    const id = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
   
   const [formData, setFormData] = useState({
     title: "",
@@ -248,6 +258,44 @@ export default function TodosSection({
       return new Date().getDate() === baseDay
     }
     return false
+  }
+
+  const isTimerRunning = (todo: Todo) => Boolean(todo.activeTimerStartedAt)
+  const getElapsedMs = (todo: Todo) => {
+    const base = todo.totalTimeMs || 0
+    if (todo.activeTimerStartedAt) {
+      const started = new Date(todo.activeTimerStartedAt).getTime()
+      const now = Date.now()
+      return base + Math.max(0, now - started)
+    }
+    return base
+  }
+  const formatDuration = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    const hh = hours > 0 ? String(hours).padStart(2, '0') + ':' : ''
+    return `${hh}${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+
+  const handleStartTimer = async (todoId: string) => {
+    try {
+      const updated = await startTodoTimer(todoId)
+      setTodos(prev => prev.map(t => t._id === todoId ? updated : t))
+      toast.success("Timer started")
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to start timer")
+    }
+  }
+  const handleStopTimer = async (todoId: string) => {
+    try {
+      const updated = await stopTodoTimer(todoId)
+      setTodos(prev => prev.map(t => t._id === todoId ? updated : t))
+      toast.success("Timer stopped")
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to stop timer")
+    }
   }
 
   // Helper function to check if todo toggle should be disabled (only allow when it occurs today)
@@ -670,6 +718,12 @@ export default function TodosSection({
       setTogglingId(todoId)
       const updatedTodo = await toggleTodoStatus(todoId)
       setTodos(prevTodos => prevTodos.map((todo) => (todo._id === todoId ? updatedTodo : todo)))
+      
+      // Trigger confetti and sound when marking as complete
+      if (isCompleted) {
+        triggerCompletionCelebration(`todo-${todoId}`, { angle: 70, spread: 40, startVelocity: 40 })
+      }
+      
       toast.success(isCompleted ? "Todo marked as completed" : "Todo marked as pending")
     } catch (error) {
       console.error("Failed to update todo status:", error)
@@ -808,18 +862,28 @@ export default function TodosSection({
       date: dateStr,
       label: getDateLabel(dateStr),
       todos: grouped[dateStr].sort((a, b) => {
-        // For past todos, sort by scheduled time (reverse chronological order)
-        if (dateStr < getTodayISO()) {
-          const aTime = a.startTime ? timeToMinutes(a.startTime) : -1
-          const bTime = b.startTime ? timeToMinutes(b.startTime) : -1
-          return bTime - aTime // Newest first
+        // First, sort by completion status - incomplete first, completed last
+        const aCompleted = isCompletedForDisplay(a)
+        const bCompleted = isCompletedForDisplay(b)
+        
+        if (aCompleted !== bCompleted) {
+          return aCompleted ? 1 : -1 // Incomplete (false) comes first
         }
         
-        // For today and future todos, sort by creation date (newest first)
+        // Within same completion status, sort by start time (chronological order)
+        const aTime = a.startTime ? timeToMinutes(a.startTime) : 9999 // No time goes to end
+        const bTime = b.startTime ? timeToMinutes(b.startTime) : 9999
+        
+        if (aTime !== bTime) {
+          return aTime - bTime // Earlier time first (9:00 AM before 5:00 PM)
+        }
+        
+        // If same start time, sort by creation date (newest first)
         if (a.createdAt && b.createdAt) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         }
-        // Fallback to _id comparison (newer MongoDB ObjectIds are greater)
+        
+        // Fallback to _id comparison
         return b._id.localeCompare(a._id)
       }),
     }))
@@ -1255,9 +1319,9 @@ export default function TodosSection({
         </DialogContent>
       </Dialog>
 
-      {/* Today header with Timeline when no scheduled todos */}
-      {onShowTimeline && filteredTodos.length === 0 && !showTodoForm && (
-        <div className="px-2 pb-2 lg:hidden">
+      {/* Today header - Mobile only - Show when no Today group exists */}
+      {onShowTimeline && !showTodoForm && !groupedTodos.find(g => g.label === "Today") && (
+        <div className="px-2 pb-4 lg:hidden">
           <div className="flex items-center gap-3">
             <div className="w-1 h-6 bg-indigo-600 rounded-full"></div>
             <h3 className="text-sm font-medium text-gray-700">Today</h3>
@@ -1316,7 +1380,7 @@ export default function TodosSection({
                  <div
                    key={todo._id}
                    className={`transition-all h-auto min-h-[96px] w-full rounded border-solid border-3 border-black  
-                  shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${getTodoColorClasses(todo.color)}`}
+                  shadow-[4px_4px_0px_0px_rgba(0,0,0,1),0_0_6px_rgba(0,0,0,0.1)] ${getTodoColorClasses(todo.color)}`}
                  >
                   {/* Top Section - Title and Actions */}
                   <div className="flex items-center justify-between  px-3 pt-3 ">
@@ -1327,7 +1391,7 @@ export default function TodosSection({
                           handleStatusChange(todo._id, checked as boolean)
                         }
                         disabled={isToggleDisabledForTodo(todo) || togglingId === todo._id}
-                        className={`h-8 w-8 rounded-full border-1 ${getCheckboxColorClasses(todo.color || 'blue')} data-[state=checked]:text-white shrink-0 ${
+                        className={`h-8 w-8 rounded-full border-2 checkbox-bouncy ${getCheckboxColorClasses(todo.color || 'blue')} data-[state=checked]:text-white shrink-0 ${
                           isToggleDisabledForTodo(todo) || togglingId === todo._id
                             ? "opacity-50 cursor-not-allowed" 
                             : ""
@@ -1339,26 +1403,50 @@ export default function TodosSection({
                           htmlFor={`todo-${todo._id}`}
                           className={`text-sm leading-5 font-semibold truncate cursor-pointer block ${
                             isCompletedForDisplay(todo)
-                              ? "line-through text-gray-400"
-                              : "text-gray-900"
+                              ? "line-through text-black/90"
+                              : "text-black"
                           }`}
                         >
                           {capitalizeFirst(todo.title)}
                         </Label>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Timer controls (hidden via flag) */}
+                        {SHOW_TODO_TIMER && (
+                          isTimerRunning(todo) ? (
+                            <button
+                              type="button"
+                              onClick={() => handleStopTimer(todo._id)}
+                              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-white border-2 border-black font-semibold shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:translate-x-[0.5px] hover:translate-y-[0.5px]"
+                              aria-label="Stop timer"
+                            >
+                              <span className="font-mono text-black">{formatDuration(getElapsedMs(todo))}</span>
+                              <span className="ml-1 text-black">■</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleStartTimer(todo._id)}
+                              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-white border-2 border-black font-semibold shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:translate-x-[0.5px] hover:translate-y-[0.5px]"
+                              aria-label="Start timer"
+                            >
+                              <span className="text-black">▶</span>
+                              <span className="font-mono text-black">Start</span>
+                            </button>
+                          )
+                        )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="p-1 h-6 w-6 hover:bg-gray-100"
+                              className="p-1 h-6 w-6 hover:bg-black/10 text-black"
                               disabled={deletingId === todo._id}
                             >
                               {deletingId === todo._id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-4 w-4 animate-spin text-black" />
                               ) : (
-                                <MoreVertical className="h-4 w-4" />
+                                <MoreVertical className="h-4 w-4 text-black" />
                               )}
                             </Button>
                           </DropdownMenuTrigger>
@@ -1390,11 +1478,11 @@ export default function TodosSection({
                   </div>
 
                   {/* Bottom Section - Time (left) and Live/Scheduled (right) */}
-                  <div className="flex items-center justify-between mt-2 px-3 py-2 text-xs text-gray-600">
+                  <div className="flex items-center justify-between mt-2 px-3 py-2 text-xs text-black">
                     {/* Left: time */}
                   <div className="flex items-center gap-2  ">
-                      <Clock className="h-4 w-4 text-gray-600" />
-                    <span className="text-gray-700 font-medium">
+                      <Clock className="h-4 w-4 text-black" />
+                    <span className="text-black font-medium">
                         {todo.startTime && todo.endTime ? `${formatTo12Hour(todo.startTime)} - ${formatTo12Hour(todo.endTime)}` : 'Unscheduled'}
                       </span>
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getPriorityBadgeClasses(todo.priority)}`}>
@@ -1405,13 +1493,13 @@ export default function TodosSection({
                     <div className="flex items-center gap-3 ">
                       {/* Calendar sync indicator */}
                       {todo.syncedToCalendar && (
-                        <span className="flex items-center gap-1 text-green-600" title="Synced to Google Calendar">
+                        <span className="flex items-center gap-1 text-black" title="Synced to Google Calendar">
                           <CalendarIcon className="h-3 w-3" />
                         </span>
                       )}
                       {isCurrentlyActive(todo.scheduledDate ?? null, todo.startTime ?? null, todo.endTime ?? null) && (
-                        <span className="flex items-center gap-1 text-purple-600" title="Happening now">
-                          <span className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></span>
+                        <span className="flex items-center gap-1 text-black" title="Happening now">
+                          <span className="w-2 h-2 bg-black rounded-full animate-pulse"></span>
                           Live
                         </span>
                       )}
@@ -1426,7 +1514,7 @@ export default function TodosSection({
                       return (
                         <Badge
                           variant="secondary"
-                          className={`text-xs px-2 py-0.5 bg-blue-100 text-blue-700 border border-blue-200 ${
+                          className={`text-xs px-2 py-0.5 bg-white text-gray-900 border-2 border-black font-semibold ${
                             isFuture ? "" : "hidden"
                           }`}
                         >

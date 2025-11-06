@@ -192,7 +192,9 @@ export default function FinanceSection({
           <FinanceDashboard timeRange={timeRange} />
         </div>
       ) : viewMode === "planner" ? (
-        <div className="flex-1 overflow-y-auto scrollbar-hide px-2" />
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <FinancePlanner />
+        </div>
       ) : (
         <>
           {/* Summary Cards */}

@@ -56,6 +56,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
     targetDate: "",
     category: "personal",
     priority: "medium" as "low" | "medium" | "high",
+    color: "blue" as "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray",
   })
   const [durationPreset, setDurationPreset] = useState<"7"|"21"|"30"|"60"|"90"|"custom">("30")
 
@@ -91,12 +92,17 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
       }
     } else if (showAddForm && !editingGoal) {
       // Opening for Add → reset form to defaults
+      // Generate random color for new goals
+      const colors = ["blue", "green", "purple", "orange", "red", "pink", "indigo", "teal", "yellow", "gray"] as const
+      const randomColor = colors[Math.floor(Math.random() * colors.length)]
+      
       setFormData({
         title: "",
         description: "",
         targetDate: durationPreset !== "custom" ? computeIsoFromPreset(durationPreset) : "",
         category: "personal",
         priority: "medium",
+        color: randomColor,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,6 +147,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
           targetDate: payloadTargetDate,
           category: formData.category,
           priority: formData.priority,
+          color: formData.color,
         })
         setGoals(goals.map((g) => (g._id === updated._id ? updated : g)))
         setEditingGoal(null)
@@ -157,6 +164,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
           targetDate: payloadTargetDate,
           category: formData.category,
           priority: formData.priority,
+          color: formData.color,
         }
         const created = await createGoal(payload)
         setGoals([...goals, created])
@@ -179,12 +187,16 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
       }
     }
 
+    const colors = ["blue", "green", "purple", "orange", "red", "pink", "indigo", "teal", "yellow", "gray"] as const
+    const randomColor = colors[Math.floor(Math.random() * colors.length)]
+    
     setFormData({
       title: "",
       description: "",
       targetDate: "",
       category: "personal",
       priority: "medium",
+      color: randomColor,
     })
     setShowAddForm(false)
   }
@@ -197,6 +209,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
       targetDate: isoDateOnly(goal.targetDate),
       category: goal.category,
       priority: goal.priority || "medium",
+      color: goal.color || "blue",
     })
     // Set preset based on difference from today using inclusive model (N = diff + 1); fallback to custom
     try {
@@ -250,6 +263,22 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
       default:
         return "bg-gray-100 text-gray-800"
     }
+  }
+
+  const getGoalColorClasses = (color: string) => {
+    const colorMap = {
+      blue: "bg-blue-400 text-black",
+      green: "bg-green-400 text-black",
+      purple: "bg-purple-400 text-black",
+      orange: "bg-orange-400 text-black",
+      red: "bg-red-400 text-black",
+      pink: "bg-pink-400 text-black",
+      indigo: "bg-indigo-400 text-black",
+      teal: "bg-teal-400 text-black",
+      yellow: "bg-yellow-300 text-black",
+      gray: "bg-gray-400 text-black",
+    }
+    return colorMap[color as keyof typeof colorMap] || colorMap.blue
   }
 
   // Urgency levels based on days to target date
@@ -384,6 +413,51 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
               />
             </div>
 
+            {/* Color */}
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="grid grid-cols-10 gap-2 w-full">
+                {[
+                  { value: "blue", color: "bg-blue-500", borderColor: "border-blue-600" },
+                  { value: "green", color: "bg-green-500", borderColor: "border-green-600" },
+                  { value: "purple", color: "bg-purple-500", borderColor: "border-purple-600" },
+                  { value: "orange", color: "bg-orange-500", borderColor: "border-orange-600" },
+                  { value: "red", color: "bg-red-500", borderColor: "border-red-600" },
+                  { value: "pink", color: "bg-pink-500", borderColor: "border-pink-600" },
+                  { value: "indigo", color: "bg-indigo-500", borderColor: "border-indigo-600" },
+                  { value: "teal", color: "bg-teal-500", borderColor: "border-teal-600" },
+                  { value: "yellow", color: "bg-yellow-500", borderColor: "border-yellow-600" },
+                  { value: "gray", color: "bg-gray-500", borderColor: "border-gray-600" },
+                ].map((colorOption) => (
+                  <label
+                    key={colorOption.value}
+                    className="cursor-pointer group"
+                  >
+                    <input
+                      type="radio"
+                      name="goal-color"
+                      value={colorOption.value}
+                      checked={formData.color === colorOption.value}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          color: e.target.value as "blue" | "green" | "purple" | "orange" | "red" | "pink" | "indigo" | "teal" | "yellow" | "gray",
+                        })
+                      }
+                      className="sr-only"
+                    />
+                    <div
+                      className={`w-7 h-7 rounded-full ${colorOption.color} transition-transform ${
+                        formData.color === colorOption.value
+                          ? "border-3 border-black"
+                          : "border-0"
+                      }`}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
               <Button
@@ -398,12 +472,15 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                 onClick={() => {
                   setShowAddForm(false)
                   setEditingGoal(null)
+                  const colors = ["blue", "green", "purple", "orange", "red", "pink", "indigo", "teal", "yellow", "gray"] as const
+                  const randomColor = colors[Math.floor(Math.random() * colors.length)]
                   setFormData({
                     title: "",
                     description: "",
                     targetDate: "",
                     category: "personal",
                     priority: "medium",
+                    color: randomColor,
                   })
                 }}
                 className="flex-1 border-3 border-black rounded shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
@@ -439,17 +516,19 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
           return (
             <div
               key={goal._id}
-              className={`bg-white p-4 rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow w-full`}
+              className={`p-4 rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1),0_0_6px_rgba(0,0,0,0.1)] transition-shadow w-full ${getGoalColorClasses(goal.color || "blue")}`}
             >
               {/* Dates Row */}
-              <div className={`flex items-center justify-between text-xs ${textClass} mb-2`}>
+              <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${
+                urgency === "high" ? "text-red-900" : urgency === "medium" ? "text-orange-900" : urgency === "low" ? "text-amber-900" : "text-black"
+              }`}>
                 <div className="flex items-center gap-2">
-                  <Calendar className={`h-3.5 w-3.5 ${textClass}`} />
+                  <Calendar className="h-3.5 w-3.5" />
                   <span>{new Date(goal.createdAt).toLocaleDateString()}</span>
                 </div>
-                <ArrowRight className={`h-3.5 w-3.5 ${iconClass}`} />
+                <ArrowRight className="h-3.5 w-3.5" />
                 <div className="flex items-center gap-2">
-                  <Calendar className={`h-3.5 w-3.5 ${textClass}`} />
+                  <Calendar className="h-3.5 w-3.5" />
                   <span>{new Date(goal.targetDate).toLocaleDateString()}</span>
                 </div>
               </div>
@@ -459,15 +538,15 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                 <div className="flex-1">
                   <h3 className={`text-base font-semibold mb-1.5 ${
                     goal.status === "completed" && goal.targetDate && new Date(goal.targetDate) < new Date() 
-                      ? "text-gray-500 line-through" 
-                      : "text-gray-900"
+                      ? "text-black/70 line-through" 
+                      : "text-black"
                   }`}>
                     {goal.title}
                   </h3>
                   <p className={`text-sm mb-2 line-clamp-2 overflow-hidden text-ellipsis h-10 ${
                     goal.status === "completed" && goal.targetDate && new Date(goal.targetDate) < new Date() 
-                      ? "text-gray-400" 
-                      : "text-gray-600"
+                      ? "text-black/60" 
+                      : "text-black/80"
                   }`}>
                     {goal.description}
                   </p>
@@ -506,30 +585,22 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
 
               {/* Status and Category */}
               <div className="flex items-center justify-between mt-1 mb-3">
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                    goal.status
-                  )}`}
-                >
+                <span className="px-2 py-1 rounded text-xs font-semibold bg-white border-2 border-black text-black">
                   {goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}
                 </span>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(
-                    goal.category
-                  )}`}
-                >
+                <span className="px-2 py-1 rounded text-xs font-semibold bg-white border-2 border-black text-black">
                   {goal.category.charAt(0).toUpperCase() + goal.category.slice(1)}
                 </span>
               </div>
 
               {/* Progress Bar */}
               <div className="mb-3">
-                <div className="w-full bg-gray-200 h-8 relative overflow-hidden">
+                <div className="w-full bg-white/30 h-8 relative overflow-hidden border-2 border-black">
                   <div
-                    className="bg-indigo-600 h-8 transition-all duration-300"
+                    className="bg-black h-full transition-all duration-300"
                     style={{ width: `${goal.progress}%` }}
                   ></div>
-                  <div className={`absolute inset-0 flex items-center justify-center text-sm md:text-base font-semibold ${goal.progress > 50 ? "text-white" : "text-gray-800"}`}>
+                  <div className={`absolute inset-0 flex items-center justify-center text-sm md:text-base font-bold ${goal.progress > 50 ? "text-white" : "text-black"}`}>
                     {goal.progress}%
                   </div>
                 </div>
@@ -540,13 +611,13 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                 <AccordionItem value={`habits-${goal._id}`} className="px-3 border-b-0">
                   <AccordionTrigger className="py-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">Linked Habits</span>
-                      <span className="text-xs text-gray-500">({goal.linkedHabits?.length || 0})</span>
+                      <span className="text-sm font-semibold text-black">Linked Habits</span>
+                      <span className="text-xs font-semibold text-black/70">({goal.linkedHabits?.length || 0})</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
                     {goal.linkedHabits && goal.linkedHabits.length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
+                      <ul className="list-disc pl-5 space-y-1 text-sm font-medium text-black">
                         {goal.linkedHabits.map((h: unknown) => {
                           const habit = h as { _id?: string; name?: string; title?: string } | string
                           const key = typeof habit === "string" ? habit : habit._id || (habit.name || habit.title || "unknown")
@@ -561,7 +632,7 @@ export default function GoalsSection({ showAddForm, setShowAddForm }: GoalsSecti
                     ) : (
                       <button
                         type="button"
-                        className="text-sm text-indigo-600 hover:underline"
+                        className="text-sm font-semibold text-black hover:underline"
                         onClick={() => {/* TODO: open habits linking flow */}}
                       >
                         Add habits

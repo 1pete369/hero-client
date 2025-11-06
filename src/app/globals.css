@@ -7,6 +7,16 @@
 ::-webkit-scrollbar-track { background-color: #11161e; }
 ::-webkit-scrollbar-thumb { width: 4px; border-radius: 999px; background-color: #314158; }
 
+/* Custom scrollbar for light backgrounds */
+.scrollbar-thin::-webkit-scrollbar { width: 6px; }
+.scrollbar-thin::-webkit-scrollbar-track { background-color: #f3f4f6; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 999px; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background-color: #9ca3af; }
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Theme tokens copied from main client for consistent UI */
 @theme {
   --color-light-background: #ffffff;
@@ -177,6 +187,28 @@
   .scrollbar-x-hide { scrollbar-width: thin; }
   .scrollbar-y-hide::-webkit-scrollbar { width: 0; }
   .scrollbar-y-hide { scrollbar-width: none; }
+}
+
+/* Bouncy checkbox animation */
+@keyframes gf-bounce-in {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.92); }
+  70% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+/* Opposite motion: expand first, then compress, then settle */
+@keyframes gf-bounce-out {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.08); }
+  70% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
+.checkbox-bouncy[data-state="checked"] {
+  animation: gf-bounce-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.checkbox-bouncy[data-state="unchecked"] {
+  animation: gf-bounce-out 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Rich Text Editor Styles */

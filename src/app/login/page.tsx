@@ -11,7 +11,12 @@ export default function LoginPage() {
   const { authUser, login, isLoggingIn } = useAuth()
 
   if (authUser) {
-    redirect("/")
+    // Check if onboarding is completed
+    if (!(authUser as any).onboardingCompleted) {
+      redirect("/onboarding")
+    } else {
+      redirect("/")
+    }
   }
 
   const [email, setEmail] = useState("")

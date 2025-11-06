@@ -6,70 +6,47 @@ import { Check } from "lucide-react";
 const tiers = [
   {
     name: "Free",
-    price: "₹0",
+    price: "$0",
     period: "/month",
-    blurb: "For anyone starting their self-improvement journey",
+    blurb: "Attract users and let them experience the core flow",
     features: [
-      "20 tasks/day",
-      "3 goals • 7 habits",
-      "14‑day journal & notes",
-      "Streaks & completion",
-      "Basic reminders",
-      "2 devices sync",
-      "Upgrade prompt at limits",
+      "Unlimited to-dos",
+      "Up to 3 goals",
+      "Up to 3 habits linked to goals",
+      "Timeline view for daily tracking",
+      "Basic analytics (7-day insights only)",
     ],
     cta: { label: "Get started free", href: "/signup" },
     highlight: false,
   },
   {
-    name: "Starter",
-    price: "₹1,599",
+    name: "Pro",
+    price: "$19",
     period: "/month",
-    blurb: "For individuals building consistency & discipline",
+    blurb: "Accountability and analytics are the real hooks here",
     features: [
       "Everything in Free",
-      "Unlimited to‑dos • 50 habits • 25 goals",
-      "Habit ↔ goal linking",
-      "Goal & habit analytics",
-      "Unlimited journal & notes",
-      "Cloud sync on unlimited devices",
-      "Exports (CSV/Markdown)",
+      "Unlimited goals, habits, and timelines",
+      "Advanced analytics & streak tracking",
+      "Dynamic Duo (Buddy) feature — share goals & habits with one friend",
+      "Custom reminders & smart notifications",
     ],
-    cta: { label: "Choose Starter", href: "/signup" },
+    cta: { label: "Go Pro", href: "/signup" },
     highlight: true,
   },
   {
-    name: "Pro",
-    price: "₹2,499",
+    name: "Premium",
+    price: "$29",
     period: "/month",
-    blurb: "For creators & professionals seeking community accountability",
-    features: [
-      "Everything in Starter",
-      "Unlimited goals & habits",
-      "Community groups & cohorts",
-      "Accountability buddy",
-      "Daily wins chat & weekly reviews",
-      "21/30‑day challenges",
-      "Streak battles & leaderboards",
-      "Early access to features",
-    ],
-    cta: { label: "Go Pro", href: "/signup" },
-    highlight: false,
-  },
-  {
-    name: "Elite",
-    price: "₹4,199",
-    period: "/month",
-    blurb: "For high‑performers who want a full life system",
+    blurb: "For small accountability groups or power users",
     features: [
       "Everything in Pro",
-      "Health & fitness suite",
-      "Calories, macros & BMI",
-      "Workouts + meal planner",
-      "1:1 priority support",
-      "AI Routine Builder (early)",
+      "Multiple buddies (up to 3)",
+      "Shared analytics for duo/group",
+      "Priority feature access + early updates",
+      "Export data (CSV / PDF summaries)",
     ],
-    cta: { label: "Unlock Elite", href: "/signup" },
+    cta: { label: "Unlock Premium", href: "/signup" },
     highlight: false,
   },
 ];
@@ -79,9 +56,9 @@ export default function PricingPage() {
     <div className="min-h-screen pt-10 bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">GrindFlow Pricing Plans</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">GrindFlow MVP Pricing</h1>
           <p className="mt-3 text-gray-600 max-w-2xl mx-auto">
-            Start free. Level up as your grind grows — simple and transparent.
+            Start free. Upgrade for accountability and advanced analytics — simple and transparent.
           </p>
         </div>
 

@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import Sidebar from "@/components/workspace/Sidebar"
+import GradientBlobs from "@/components/ui/GradientBlobs"
 
 import TodosSection from "@/components/workspace/TodosSection"
 import type { Todo } from "@/services"
@@ -28,7 +29,7 @@ import CalendarSection from "@/components/workspace/CalendarSection"
 import GoalsSection from "@/components/workspace/GoalsSection"
 import HabitsSection from "@/components/workspace/HabitsSection"
 import NotesFeature from "@/components/workspace/NotesFeature"
-import FinanceSection from "@/components/workspace/FinanceSection"
+// import FinanceSection from "@/components/workspace/FinanceSection"
 import TimelineView from "@/components/workspace/TimelineView"
 // Note pages removed
 
@@ -43,9 +44,9 @@ function WorkspaceContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showTodoForm, setShowTodoForm] = useState(false)
-  const [showFinanceForm, setShowFinanceForm] = useState(false)
-  const [financeViewMode, setFinanceViewMode] = useState<"list" | "dashboard" | "planner">("list")
-  const [financeTimeRange, setFinanceTimeRange] = useState("365")
+  // const [showFinanceForm, setShowFinanceForm] = useState(false)
+  // const [financeViewMode, setFinanceViewMode] = useState<"list" | "dashboard" | "planner">("list")
+  // const [financeTimeRange, setFinanceTimeRange] = useState("365")
   const [todosRefreshTrigger, setTodosRefreshTrigger] = useState(0)
   const [showGoalsForm, setShowGoalsForm] = useState(false)
   const [showHabitsForm, setShowHabitsForm] = useState(false)
@@ -115,7 +116,7 @@ function WorkspaceContent() {
     const urlSection = new URLSearchParams(window.location.search).get("section")
     if (
       urlSection &&
-      ["todos", "calendar", "goals", "habits", "notes", "journals", "finance"].includes(urlSection)
+      ["todos", "calendar", "goals", "habits", "notes", "journals"/*, "finance"*/].includes(urlSection)
     ) {
       setActiveSection(urlSection)
     }
@@ -137,6 +138,11 @@ function WorkspaceContent() {
     if (isCheckingAuth) return
     if (!authUser) {
       redirect("/login")
+      return
+    }
+    // Check if onboarding is completed
+    if (!(authUser as any).onboardingCompleted) {
+      redirect("/onboarding")
       return
     }
     setIsLoading(false)
@@ -242,15 +248,15 @@ function WorkspaceContent() {
         return <NotesFeature />
       // case "journals":
       //   return <JournalsSection />
-      case "finance":
-        return (
-          <FinanceSection 
-            viewMode={financeViewMode}
-            showTransactionForm={showFinanceForm}
-            setShowTransactionForm={setShowFinanceForm}
-            timeRange={financeTimeRange}
-          />
-        )
+      // case "finance":
+      //   return (
+      //     <FinanceSection 
+      //       viewMode={financeViewMode}
+      //       showTransactionForm={showFinanceForm}
+      //       setShowTransactionForm={setShowFinanceForm}
+      //       timeRange={financeTimeRange}
+      //     />
+      //   )
       default:
         return null
     }
@@ -281,14 +287,15 @@ function WorkspaceContent() {
           />
         )}
 
-        <main className="flex-1  h-full overflow-hidden ">
+        <main className="flex-1  h-full overflow-hidden relative ">
+          <GradientBlobs density="high" />
           <div className="max-w-7xl mx-auto w-full h-full flex flex-col ">
             <div className="mb-4 flex flex-col  lg:flex-row lg:items-center lg:justify-between w-full flex-shrink-0  border-b-3 border-black  ">
               <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0 p-2 ">
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">{activeSection === "finance" ? "Finance" : `Hi ${firstName}, Good ${greeting}!`}</h1>
+                  <h1 className="text-xl font-bold text-gray-900 mb-1 truncate">{/* activeSection === "finance" ? "Finance" : */ `Hi ${firstName}, Good ${greeting}!`}</h1>
                   <p className="text-gray-600 text-xs truncate">
-                    {activeSection === "finance" ? "Track your income and expenses" : "Manage your daily tasks and priorities"}
+                    {/* activeSection === "finance" ? "Track your income and expenses" : */ "Manage your daily tasks and priorities"}
                   </p>
                 </div>
                 <Button
@@ -367,8 +374,8 @@ function WorkspaceContent() {
                    </DropdownMenu>
                  )}
 
-                {/* Finance View Toggle */}
-                {activeSection === "finance" && (
+               {/* Finance View Toggle */}
+               {/* {activeSection === "finance" && (
                   <div className="flex items-center gap-2">
                     <div className="flex items-center rounded border-3 border-black bg-white shadow-[4px_4px_0_0_rgba(0,0,0,1)] overflow-hidden">
                       <button
@@ -382,18 +389,8 @@ function WorkspaceContent() {
                         List
                       </button>
                       <button
-                        onClick={() => setFinanceViewMode("planner")}
-                        className={`px-3 h-8 text-xs border-r-3 border-black transition-transform ${
-                          financeViewMode === "planner"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-white text-indigo-700 hover:bg-indigo-50"
-                        }`}
-                      >
-                        Planner
-                      </button>
-                      <button
                         onClick={() => setFinanceViewMode("dashboard")}
-                        className={`px-3 h-8 text-xs transition-transform ${
+                        className={`px-3 h-8 text-xs border-r-3 border-black transition-transform ${
                           financeViewMode === "dashboard"
                             ? "bg-indigo-600 text-white"
                             : "bg-white text-indigo-700 hover:bg-indigo-50"
@@ -401,9 +398,18 @@ function WorkspaceContent() {
                       >
                         Dashboard
                       </button>
+                      <button
+                        onClick={() => setFinanceViewMode("planner")}
+                        className={`px-3 h-8 text-xs transition-transform ${
+                          financeViewMode === "planner"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-indigo-700 hover:bg-indigo-50"
+                        }`}
+                      >
+                        Planner
+                      </button>
                     </div>
                     
-                    {/* Time Range Selector - only show in dashboard mode */}
                     {financeViewMode === "dashboard" && (
                       <Select value={financeTimeRange} onValueChange={setFinanceTimeRange}>
                         <SelectTrigger className="w-32 h-8 text-xs">
@@ -418,7 +424,7 @@ function WorkspaceContent() {
                       </Select>
                     )}
                   </div>
-                )}
+                )} */}
 
                 {activeSection === "todos" && (
                   <>
@@ -541,7 +547,7 @@ function WorkspaceContent() {
                   <Button
                     onClick={() => {
                       if (activeSection === "todos") setShowTodoForm(true)
-                      else if (activeSection === "finance") setShowFinanceForm(true)
+                      // else if (activeSection === "finance") setShowFinanceForm(true)
                       else if (activeSection === "goals") setShowGoalsForm(true)
                       else if (activeSection === "habits") setShowHabitsForm(true)
                       else if (activeSection === "notes") {
@@ -573,7 +579,8 @@ function WorkspaceContent() {
           onClick={() => {
             if (activeSection === "todos") {
               setShowTodoForm(true)
-            } else if (activeSection === "finance") setShowFinanceForm(true)
+            } 
+            // else if (activeSection === "finance") setShowFinanceForm(true)
             else if (activeSection === "goals") setShowGoalsForm(true)
             else if (activeSection === "habits") setShowHabitsForm(true)
             else if (activeSection === "notes") {

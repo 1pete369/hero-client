@@ -3,16 +3,22 @@
 import { useAuth } from "@/context/useAuthContext"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
-import { redirect } from "next/navigation"
+import { redirect, useRouter as useNextRouter } from "next/navigation"
 import { ChangeEvent, FormEvent, useState } from "react"
 import toast from "react-hot-toast"
 import GoogleSignInButton from "@/components/GoogleSignInButton"
 
 export default function SignUpPage() {
+  const router = useNextRouter()
   const { authUser, isSigningUp, signup } = useAuth()
 
   if (authUser) {
-    redirect("/")
+    // Check if onboarding is completed
+    if (!(authUser as any).onboardingCompleted) {
+      redirect("/onboarding")
+    } else {
+      redirect("/")
+    }
   }
 
   const [name, setName] = useState("")
@@ -42,8 +48,11 @@ export default function SignUpPage() {
     
     try {
       // Use email as username
-      await signup({ fullName: name.trim(), username: email.trim(), email, password })
-      toast.success("Account created successfully! Welcome to GrindFlowClub!")
+      const user = await signup({ fullName: name.trim(), username: email.trim(), email, password })
+      toast.success("Account created successfully!")
+      
+      // Redirect to onboarding after successful signup
+      router.push("/onboarding")
     } catch (error: any) {
       // Handle error quietly (toast below); avoid console.error to prevent dev overlay
       

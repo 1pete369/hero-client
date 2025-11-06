@@ -5,6 +5,7 @@ import { Clock, Dot, ChevronLeft, ChevronRight } from "lucide-react"
 import ConflictWarningDialog from "@/components/ui/ConflictWarningDialog"
 import { detectTimeConflicts, type TimeConflict } from "@/utils/timeConflict"
 import type { Todo } from "@/services"
+import GradientBlobs from "@/components/ui/GradientBlobs"
 import { updateTodo } from "@/services"
 import {
   DndContext,
@@ -15,7 +16,6 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
-  closestCenter,
   useDroppable,
   DragOverlay,
 } from '@dnd-kit/core'
@@ -72,14 +72,14 @@ function DraggableTimelineBlock({
   })
 
 
+  // Completely disable transform on the hidden original element when dragging
   const style = {
-    // Lock horizontal movement for scheduled timeline blocks to avoid cursor misalignment
-    transform: transform ? `translate3d(0, ${transform.y ?? 0}px, 0)` : undefined,
     top,
     height,
     width,
     left,
     touchAction: 'none' as const, // Critical for mobile drag functionality
+    visibility: isDragging ? ('hidden' as const) : ('visible' as const), // Completely hide when dragging
   }
 
   const live = isToday && currentMinute() >= start && currentMinute() < end
@@ -92,13 +92,13 @@ function DraggableTimelineBlock({
       ref={setNodeRef}
       style={style}
       className={[
-        "absolute rounded border shadow-sm transition",
+        "absolute rounded border shadow-sm",
         "hover:shadow-md",
         todo.isCompleted ? "opacity-60" : "",
         "before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 before:rounded",
         leftColor,
         blockColor,
-        disabled ? "cursor-not-allowed" : (isDragging ? "cursor-grabbing shadow-lg z-50" : "cursor-grab"),
+        disabled ? "cursor-not-allowed" : (isDragging ? "pointer-events-none" : "cursor-grab"),
         isPressing ? "scale-105 shadow-lg z-40" : "",
       ].join(" ")}
       aria-label={`Press and hold to drag ${todo.title}`}
@@ -110,17 +110,17 @@ function DraggableTimelineBlock({
     >
       <div className="flex h-full flex-col px-2.5 py-1.5">
         <div className="flex items-center justify-between">
-          <span className="truncate text-[12px] font-semibold text-gray-900">{todo.title}</span>
+          <span className="truncate text-[12px] font-semibold text-black">{todo.title}</span>
           <div className="flex items-center gap-1">
             {live && (
-              <span className="inline-flex items-center gap-0.5 rounded border border-emerald-200 px-1 py-0.5 text-[10px] text-emerald-700">
+              <span className="inline-flex items-center gap-0.5 rounded bg-white border-2 border-black px-1 py-0.5 text-[10px] text-emerald-700 font-semibold">
                 <Dot className="h-3 w-3 animate-pulse text-emerald-600" />
                 Live
               </span>
             )}
           </div>
         </div>
-        <div className="mt-0.5 text-[10px] font-mono text-gray-500">
+        <div className="mt-0.5 text-[10px] font-mono text-black/90">
           {todo.startTime && todo.endTime ? `${formatTo12Hour(todo.startTime)} – ${formatTo12Hour(todo.endTime)} • ${duration < 60 ? `${duration}m` : `${Math.floor(duration / 60)}h ${duration % 60}m`}` : 'Unscheduled'}
         </div>
       </div>
@@ -171,16 +171,16 @@ const COLOR_LEFT: Record<string, string> = {
   gray: "before:bg-gray-500",
 }
 const COLOR_BLOCK: Record<string, string> = {
-  blue: "bg-blue-50 border-blue-200",
-  green: "bg-green-50 border-green-200",
-  purple: "bg-purple-50 border-purple-200",
-  orange: "bg-orange-50 border-orange-200",
-  red: "bg-red-50 border-red-200",
-  pink: "bg-pink-50 border-pink-200",
-  indigo: "bg-indigo-50 border-indigo-200",
-  teal: "bg-teal-50 border-teal-200",
-  yellow: "bg-yellow-50 border-yellow-200",
-  gray: "bg-gray-50 border-gray-200",
+  blue: "bg-blue-400 border-black border-2",
+  green: "bg-green-400 border-black border-2",
+  purple: "bg-purple-400 border-black border-2",
+  orange: "bg-orange-400 border-black border-2",
+  red: "bg-red-400 border-black border-2",
+  pink: "bg-pink-400 border-black border-2",
+  indigo: "bg-indigo-400 border-black border-2",
+  teal: "bg-teal-400 border-black border-2",
+  yellow: "bg-yellow-300 border-black border-2",
+  gray: "bg-gray-400 border-black border-2",
 }
 
 // 30-minute default duration for newly scheduled items
@@ -291,6 +291,51 @@ export default function TimelineView({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null)
   const [isPressing, setIsPressing] = useState<string | null>(null)
+  
+  // Memoize overlay content to avoid recalculating on every mousemove
+  const overlayContent = useMemo(() => {
+    if (!activeTodo) return null
+    
+    const colorKey = (activeTodo.color ?? 'blue') as string
+    const leftColor = COLOR_LEFT[colorKey] ?? COLOR_LEFT.blue
+    const blockColor = COLOR_BLOCK[colorKey] ?? COLOR_BLOCK.blue
+    
+    // If it has time (scheduled on timeline), render as timeline block
+    if (activeTodo.startTime && activeTodo.endTime) {
+      const start = timeToMinutes(activeTodo.startTime)
+      const end = timeToMinutes(activeTodo.endTime)
+      const duration = end - start
+      
+      return (
+        <div className={[
+          'relative rounded border shadow-lg px-2 py-1.5 text-[12px] min-h-[40px] w-[200px]',
+          'before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 before:rounded',
+          leftColor,
+          blockColor,
+          'opacity-90',
+        ].join(' ')}>
+          <div className="font-medium truncate leading-tight text-black">{activeTodo.title}</div>
+          <div className="text-[10px] opacity-75 mt-0.5 font-mono text-black">
+            {formatTo12Hour(activeTodo.startTime)} – {formatTo12Hour(activeTodo.endTime)} • {duration < 60 ? `${duration}m` : `${Math.floor(duration / 60)}h ${duration % 60}m`}
+          </div>
+        </div>
+      )
+    }
+    
+    // Otherwise render as inbox item (unscheduled)
+    return (
+      <div className={[
+        'relative inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px] text-gray-900 bg-white',
+        'shadow-md',
+        'before:absolute before:left-0.5 before:top-1/2 before:-translate-y-1/2 before:h-3.5 before:w-1.5 before:rounded before:content-[""]',
+        leftColor.replace('before:bg-', 'before:bg-'),
+        'border-gray-200',
+        'opacity-90',
+      ].join(' ')}>
+        <span className="truncate max-w-[200px]">{activeTodo.title}</span>
+      </div>
+    )
+  }, [activeTodo])
   // Temporarily hide items from Inbox once user drops them to schedule,
   // until the backend refresh arrives, to avoid duplicate chip + block.
   const [pendingScheduleIds, setPendingScheduleIds] = useState<Set<string>>(new Set())
@@ -298,17 +343,17 @@ export default function TimelineView({
   const [conflicts, setConflicts] = useState<TimeConflict[]>([])
   const [pendingSchedule, setPendingSchedule] = useState<null | { todoId: string; title: string; startTime: string; endTime: string; dateISO: string }>(null)
   
-  // Configure sensors for better drag experience (including touch)
+  // Configure sensors for smooth drag experience with minimal delay
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px of movement before drag starts
+        distance: 2, // Reduced from 8px - starts drag almost immediately
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250, // Press and hold for 250ms to start drag
-        tolerance: 5, // Allow small movement during press and hold
+        delay: 100, // Reduced from 250ms - faster response
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor)
@@ -323,16 +368,16 @@ export default function TimelineView({
     if (dateISO < baseISO) return false
     const recurring: any = (todo as any).recurring
     if (!recurring || recurring === 'none') return false
-    const d = new Date(dateISO + 'T00:00:00Z')
+    const d = new Date(dateISO + 'T00:00:00')
     if (recurring === 'daily') return true
     if (recurring === 'weekly') {
       const map = ['sun','mon','tue','wed','thu','fri','sat']
       const daysArr: string[] = Array.isArray((todo as any).days) ? (todo as any).days : []
-      return daysArr.includes(map[d.getUTCDay()])
+      return daysArr.includes(map[d.getDay()])
     }
     if (recurring === 'monthly') {
-      const baseDay = new Date(baseISO + 'T00:00:00Z').getUTCDate()
-      return d.getUTCDate() === baseDay
+      const baseDay = new Date(baseISO + 'T00:00:00').getDate()
+      return d.getDate() === baseDay
     }
     return false
   }
@@ -527,7 +572,8 @@ export default function TimelineView({
   }, [internalSelectedDate, filtered])
 
   return (
-    <div className="flex h-full flex-col rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white overflow-hidden box-border">
+    <div className="flex h-full flex-col rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white overflow-hidden box-border relative">
+      <GradientBlobs density="low" />
       {/* Header (compact) - only show if showHeader is true */}
       {showHeader && (
         <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-3 py-2.5">
@@ -605,31 +651,16 @@ export default function TimelineView({
        <div className="relative flex-1 overflow-hidden">
          <DndContext
            sensors={sensors}
-           collisionDetection={closestCenter}
            onDragStart={handleDragStart}
            onDragEnd={handleDragEnd}
+           autoScroll={{ threshold: { x: 0.2, y: 0.2 }, acceleration: 10 }}
          >
-          {/* Global drag overlay so items remain visible across containers */}
-          <DragOverlay dropAnimation={null}>
-            {activeTodo && (!activeTodo.startTime || !activeTodo.endTime) ? (
-              <div className="pointer-events-none z-50">
-                {(() => {
-                  const colorKey = (activeTodo.color ?? 'blue') as string
-                  const leftColor = COLOR_LEFT[colorKey] ?? COLOR_LEFT.blue
-                  return (
-                    <div className={[
-                      'relative inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px] text-gray-900 bg-white',
-                      'shadow-md',
-                      'before:absolute before:left-0.5 before:top-1/2 before:-translate-y-1/2 before:h-3.5 before:w-1.5 before:rounded before:content-[""]',
-                      leftColor.replace('before:bg-', 'before:bg-'),
-                      'border-gray-200',
-                    ].join(' ')}>
-                      <span className="truncate max-w-[200px]">{activeTodo.title}</span>
-                    </div>
-                  )
-                })()}
-              </div>
-            ) : null}
+          {/* Global drag overlay - Optimized with memoized content */}
+          <DragOverlay 
+            dropAnimation={null}
+            adjustScale={false}
+          >
+            {overlayContent}
           </DragOverlay>
            {/* Inbox of unscheduled todos and todos for selected date WITHOUT time blocks */}
            {(() => {
