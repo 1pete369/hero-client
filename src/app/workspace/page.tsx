@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import Sidebar from "@/components/workspace/Sidebar"
-import GradientBlobs from "@/components/ui/GradientBlobs"
 
 import TodosSection from "@/components/workspace/TodosSection"
 import type { Todo } from "@/services"
@@ -272,23 +271,31 @@ function WorkspaceContent() {
 
   return (
     <div className="h-screen flex overflow-hidden">
-      <div className="flex flex-1 min-h-0">
+      <div className="hidden lg:block lg:flex-shrink-0">
         <Sidebar
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
           isMobileMenuOpen={isMobileMenuOpen}
           onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
         />
-        {isMobileMenuOpen && (
-          <div
-            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
-            onClick={() => setIsMobileMenuOpen(false)}
-            aria-hidden="true"
-          />
-        )}
+      </div>
+      <div className="lg:hidden w-0 flex-shrink-0">
+        <Sidebar
+          activeSection={activeSection}
+          onSectionChange={handleSectionChange}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
+        />
+      </div>
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-        <main className="flex-1  h-full overflow-hidden relative ">
-          <GradientBlobs density="high" />
+      <main className="flex-1 h-full overflow-hidden relative w-full min-w-0">
           <div className="max-w-7xl mx-auto w-full h-full flex flex-col ">
             <div className="mb-4 flex flex-col  lg:flex-row lg:items-center lg:justify-between w-full flex-shrink-0  border-b-3 border-black  ">
               <div className="flex items-center justify-between gap-2 lg:w-auto w-full min-w-0 p-2 ">
@@ -573,7 +580,6 @@ function WorkspaceContent() {
             </div>
           </div>
         </main>
-      </div>
       {activeSection !== "calendar" && (
         <button
           onClick={() => {

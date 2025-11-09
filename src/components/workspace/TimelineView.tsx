@@ -5,7 +5,6 @@ import { Clock, Dot, ChevronLeft, ChevronRight } from "lucide-react"
 import ConflictWarningDialog from "@/components/ui/ConflictWarningDialog"
 import { detectTimeConflicts, type TimeConflict } from "@/utils/timeConflict"
 import type { Todo } from "@/services"
-import GradientBlobs from "@/components/ui/GradientBlobs"
 import { updateTodo } from "@/services"
 import {
   DndContext,
@@ -573,7 +572,6 @@ export default function TimelineView({
 
   return (
     <div className="flex h-full flex-col rounded border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white overflow-hidden box-border relative">
-      <GradientBlobs density="low" />
       {/* Header (compact) - only show if showHeader is true */}
       {showHeader && (
         <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-3 py-2.5">

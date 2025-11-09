@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import GradientBlobs from "@/components/ui/GradientBlobs"
 
 interface SidebarProps {
   activeSection: string
@@ -63,14 +62,14 @@ export default function Sidebar({
       <aside
         className={`
           fixed lg:static top-0 left-0 z-30
-          w-64 bg-white border-r-3 border-black  
+          w-64 h-screen lg:h-full bg-white border-r-3 border-black  
           transform transition-transform duration-300 ease-in-out
           lg:translate-x-0
-          ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
-          flex flex-col h-full relative
+          ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          flex flex-col relative
+          ${!isMobileMenuOpen ? "pointer-events-none lg:pointer-events-auto" : "pointer-events-auto"}
         `}
       >
-        <GradientBlobs density="low" />
         <div className="p-4 border-b-3 border-black ">
           <div className="flex items-center justify-between">
             <Link href={"/"}>
