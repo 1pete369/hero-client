@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react"
-import { Clock, Dot, ChevronLeft, ChevronRight } from "lucide-react"
+import { Clock, Dot, ChevronLeft, ChevronRight, X } from "lucide-react"
 import ConflictWarningDialog from "@/components/ui/ConflictWarningDialog"
 import { detectTimeConflicts, type TimeConflict } from "@/utils/timeConflict"
 import type { Todo } from "@/services"
-import { updateTodo } from "@/services"
+import { updateTodo, deleteTodo } from "@/services"
 import {
   DndContext,
   DragEndEvent,
@@ -502,7 +502,25 @@ export default function TimelineView({
       return
     }
 
-    if (!activeTodo || !delta.y) {
+    // If dropped back in inbox or not on a valid drop zone, just reset state
+    // This handles the case where user drags from inbox and drops it back
+    if (!over || (typeof over.id === 'string' && !over.id.toString().startsWith('slot-'))) {
+      // If this was an inbox item (no time blocks), make sure it's not stuck in pendingScheduleIds
+      if (activeTodo && (!activeTodo.startTime || !activeTodo.endTime)) {
+        setPendingScheduleIds((prev) => {
+          const next = new Set(prev)
+          next.delete(activeTodo._id)
+          return next
+        })
+      }
+      setActiveId(null)
+      setActiveTodo(null)
+      return
+    }
+
+    // Only update time if the todo already has time blocks (is on timeline)
+    // Don't update inbox items that don't have time blocks yet
+    if (!activeTodo || !activeTodo.startTime || !activeTodo.endTime || !delta.y) {
       setActiveId(null)
       setActiveTodo(null)
       return
@@ -512,9 +530,9 @@ export default function TimelineView({
     // Calculate new time based on drag distance
     const deltaMinutes = Math.round(delta.y / MINUTE_TO_PX)
     
-    // If todo doesn't have time blocks yet (from inbox), use default values
-    const originalStartMinutes = activeTodo.startTime ? timeToMinutes(activeTodo.startTime) : 0
-    const originalEndMinutes = activeTodo.endTime ? timeToMinutes(activeTodo.endTime) : DEFAULT_DURATION_MINUTES
+    // Todo already has time blocks, so we can safely update
+    const originalStartMinutes = timeToMinutes(activeTodo.startTime)
+    const originalEndMinutes = timeToMinutes(activeTodo.endTime)
     const duration = originalEndMinutes - originalStartMinutes
 
     // Snap to 5-minute grid, but preserve duration near day end by clamping start
@@ -694,7 +712,28 @@ export default function TimelineView({
                  </div>
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                   {inboxTodos.map((t) => (
-                    <InboxDraggable key={t._id} todo={t} colorMap={COLOR_BLOCK} onPressStart={() => handlePressStart(t._id)} onPressEnd={handlePressEnd} isPressing={isPressing === t._id} disabled={isPastDate} />
+                    <InboxDraggable 
+                      key={t._id} 
+                      todo={t} 
+                      colorMap={COLOR_BLOCK} 
+                      onPressStart={() => handlePressStart(t._id)} 
+                      onPressEnd={handlePressEnd} 
+                      isPressing={isPressing === t._id} 
+                      disabled={isPastDate}
+                      onDelete={async () => {
+                        if (onDeleteTodo) {
+                          onDeleteTodo(t._id)
+                        } else {
+                          // Fallback: delete directly if no handler provided
+                          try {
+                            await deleteTodo(t._id)
+                            onTodoUpdate?.()
+                          } catch (error) {
+                            console.error('Failed to delete todo:', error)
+                          }
+                        }
+                      }}
+                    />
                   ))}
                  </div>
                </div>
@@ -820,13 +859,13 @@ export default function TimelineView({
 }
 
 // Draggable chip for Inbox items
-function InboxDraggable({ todo, colorMap, onPressStart, onPressEnd, isPressing, disabled }: { todo: Todo, colorMap: Record<string,string>, onPressStart: () => void, onPressEnd: () => void, isPressing: boolean, disabled: boolean }) {
+function InboxDraggable({ todo, colorMap, onPressStart, onPressEnd, isPressing, disabled, onDelete }: { todo: Todo, colorMap: Record<string,string>, onPressStart: () => void, onPressEnd: () => void, isPressing: boolean, disabled: boolean, onDelete?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: todo._id, disabled })
   const style = { transform: transform ? `translate3d(${transform.x ?? 0}px, ${transform.y ?? 0}px, 0)` : undefined, touchAction: 'none' as const }
   const baseColor = (todo.color ?? 'blue') as string
   const leftAccent = COLOR_LEFT[baseColor] ?? COLOR_LEFT.blue
   const classes = [
-    'relative shrink-0 inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px] text-gray-900 bg-white',
+    'relative shrink-0 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] text-gray-900 bg-white group',
     'shadow-sm hover:shadow transition',
     'before:absolute before:left-0.5 before:top-1/2 before:-translate-y-1/2 before:h-3.5 before:w-1.5 before:rounded before:content-[""]',
     leftAccent.replace('before:bg-', 'before:bg-'),
@@ -834,10 +873,28 @@ function InboxDraggable({ todo, colorMap, onPressStart, onPressEnd, isPressing, 
     disabled ? 'cursor-not-allowed opacity-60' : (isDragging ? 'cursor-grabbing shadow-md opacity-0' : 'cursor-grab'),
     isPressing ? 'scale-105 shadow-md' : '',
   ].join(' ')
+  
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    onDelete?.()
+  }
+  
   return (
     <div ref={setNodeRef} style={style} className={classes} onTouchStart={disabled ? undefined : onPressStart} onTouchEnd={disabled ? undefined : onPressEnd} onTouchCancel={disabled ? undefined : onPressEnd} {...(disabled ? {} as any : listeners)} {...(disabled ? {} as any : attributes)}>
-      <span className="truncate max-w-[160px]">{todo.title}</span>
-      
+      <span className="truncate max-w-[140px]">{todo.title}</span>
+      {onDelete && (
+        <button
+          onClick={handleDelete}
+          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-0.5 hover:bg-red-50 active:bg-red-100 rounded flex-shrink-0"
+          aria-label="Delete todo"
+          title="Delete todo"
+          onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking delete
+          onTouchStart={(e) => e.stopPropagation()} // Prevent drag on touch devices
+        >
+          <X className="h-3 w-3 text-red-600 hover:text-red-700" />
+        </button>
+      )}
     </div>
   )
 }

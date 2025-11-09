@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react"
 import { useAuth } from "@/context/useAuthContext"
 import { redirect, useRouter, useSearchParams } from "next/navigation"
-import { getTodos } from "@/services"
+import { getTodos, deleteTodo } from "@/services"
 import { Menu, List, Clock, CheckCircle, Calendar, ChevronDown, History, Tag, SlidersHorizontal, Briefcase, Heart, BookOpen, ShoppingCart, Wallet, User, Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -184,8 +184,13 @@ function WorkspaceContent() {
                   onEditTodo={(todo) => {
                     console.log('Edit todo:', todo)
                   }}
-                  onDeleteTodo={(todoId) => {
-                    console.log('Delete todo:', todoId)
+                  onDeleteTodo={async (todoId) => {
+                    try {
+                      await deleteTodo(todoId)
+                      await reloadTodos()
+                    } catch (error) {
+                      console.error('Failed to delete todo:', error)
+                    }
                   }}
                   onToggleStatus={(todoId, isCompleted) => {
                     console.log('Toggle todo:', todoId, isCompleted)
@@ -227,6 +232,14 @@ function WorkspaceContent() {
                       onEditTodo={(todo) => {
                         console.log('Edit todo:', todo)
                         setShowTimelineModal(false)
+                      }}
+                      onDeleteTodo={async (todoId) => {
+                        try {
+                          await deleteTodo(todoId)
+                          await reloadTodos()
+                        } catch (error) {
+                          console.error('Failed to delete todo:', error)
+                        }
                       }}
                       onTodoUpdate={reloadTodos}
                       showHeader={false}
